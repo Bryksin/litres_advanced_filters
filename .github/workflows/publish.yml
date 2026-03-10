@@ -2,6 +2,7 @@ name: Publish Docker Image
 
 on:
   push:
+    branches: [master]
     tags:
       - "v*"
 
@@ -21,15 +22,23 @@ jobs:
           fetch-depth: 0
 
       - name: Verify tag is on master
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
             echo "::error::Tag must be on the master branch. Aborting publish."
             exit 1
           fi
 
-      - name: Extract version from tag
+      - name: Determine tags
         id: meta
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        run: |
+          REPO="${{ secrets.DOCKERHUB_USERNAME }}/litres_advanced_filters"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            echo "tags=${REPO}:${VERSION},${REPO}:latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=${REPO}:latest" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -46,8 +55,6 @@ jobs:
           context: .
           file: docker/app/Dockerfile
           push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/litres_advanced_filters:${{ steps.meta.outputs.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/litres_advanced_filters:latest
+          tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
