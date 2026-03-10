@@ -33,15 +33,19 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
-# Application code and mount point for persistent data
+# Application code, migrations, and mount point for persistent data
 COPY app ./app
 COPY templates ./templates
 COPY static ./static
+COPY alembic.ini ./
+COPY db ./db
+COPY docker/app/entrypoint.sh ./
 RUN mkdir -p /app/persistent && chown -R appuser:appuser /app
 
 USER appuser
 
 EXPOSE 5000
 
+ENTRYPOINT ["sh", "entrypoint.sh"]
 # Production WSGI server (multi-worker); Flask dev server is single-threaded and not for production
 CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:create_app()"]
