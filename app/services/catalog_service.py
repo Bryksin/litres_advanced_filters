@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import Integer, case, func, literal
+from sqlalchemy import case, func, literal
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import (
