@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import case, func, literal
+from sqlalchemy import Integer, case, func, literal
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import (
@@ -90,29 +90,9 @@ def _build_filtered_book_query(
     elif query.standalones_only:
         q = q.filter(~has_series)
 
-    # Series size filter — count actual audiobooks in our DB, not LitRes book_count
-    # (LitRes book_count includes all formats: ebooks, PDFs, etc.)
-    if query.series_only and (query.series_min is not None or query.series_max is not None):
-        actual_count = (
-            session.query(
-                BookSeries.series_id,
-                func.count().label("cnt"),
-            )
-            .group_by(BookSeries.series_id)
-        )
-        if query.series_min is not None:
-            actual_count = actual_count.having(func.count() >= query.series_min)
-        if query.series_max is not None:
-            actual_count = actual_count.having(func.count() <= query.series_max)
-        matching_series = actual_count.subquery()
-        q = q.filter(
-            Book.id.in_(
-                session.query(BookSeries.book_id)
-                .filter(BookSeries.series_id.in_(
-                    session.query(matching_series.c.series_id)
-                ))
-            )
-        )
+    # Series size filter is applied post-grouping in _get_paginated_card_groups()
+    # because other filters (subscription, narrator exclusion) reduce the actual
+    # book count per series — filtering here would use pre-filter counts.
 
     # Full series under subscription (F-10)
     if query.series_only and query.full_series_subscription:
@@ -185,7 +165,8 @@ def _build_filtered_book_query(
     return q
 
 
-def _get_paginated_card_groups(session, base_q, sort_key, page, page_size):
+def _get_paginated_card_groups(session, base_q, sort_key, page, page_size,
+                               series_min=None, series_max=None):
     """SQL-level grouping and pagination.
 
     Groups filtered books by series_id (for series books) or book.id (for standalones).
@@ -216,16 +197,27 @@ def _get_paginated_card_groups(session, base_q, sort_key, page, page_size):
         .group_by(group_key, card_type)
     )
 
+    # Series size filter — applied here so it counts post-filter books
+    if series_min is not None:
+        groups_q = groups_q.having(func.count() >= series_min)
+    if series_max is not None:
+        groups_q = groups_q.having(func.count() <= series_max)
+
     # Apply sort
+    # Floor to 1 decimal to match Python's "%.1f" display rounding.
+    # SQLite round(4.85,1)=4.9 but Python "%.1f"%4.85="4.8" — using
+    # CAST(x*10 AS INTEGER)/10.0 ensures sort buckets match displayed values.
+    _display_rating = (func.cast(func.avg(Book.rating_avg) * 10, Integer) / 10.0)
+
     if sort_key == "rating_avg_desc":
         groups_q = groups_q.order_by(
-            func.round(func.avg(Book.rating_avg), 1).desc(),
+            _display_rating.desc(),
             func.sum(func.coalesce(Book.rating_count, 0)).desc(),
         )
     elif sort_key == "rating_count_desc":
         groups_q = groups_q.order_by(
             func.sum(func.coalesce(Book.rating_count, 0)).desc(),
-            func.round(func.avg(Book.rating_avg), 1).desc(),
+            _display_rating.desc(),
         )
     else:  # release_date_desc (default)
         groups_q = groups_q.order_by(func.max(Book.release_date).desc())
@@ -353,7 +345,7 @@ def _load_card_details(session, page_groups):
                 title=series.name,
                 cover_url=first_book.cover_url if first_book else None,
                 url=_abs_url(series.url) if series.url else (_abs_url(first_book.url) if first_book else ""),
-                rating_avg=avg_rating,
+                rating_avg=round(avg_rating, 1) if avg_rating else None,
                 rating_count=total_rc,
                 series_id=sid,
                 book_count=row.book_count,
@@ -497,6 +489,7 @@ def get_catalog(
     # Normal path: SQL-level grouping + pagination
     page_groups, total_count = _get_paginated_card_groups(
         session, base_q, query.sort, query.page, query.page_size,
+        series_min=query.series_min, series_max=query.series_max,
     )
 
     cards = _load_card_details(session, page_groups)
