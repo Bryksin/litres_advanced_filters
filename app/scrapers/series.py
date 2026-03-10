@@ -46,7 +46,7 @@ def parse_series_page(
     and list of books (title, url, art_id, position, authors, narrators, rating, subscription, price).
     """
     soup = BeautifulSoup(html, "html.parser")
-    text = soup.get_text(" ", strip=True)
+    soup.get_text(" ", strip=True)
 
     # Series id from URL
     series_id = 0

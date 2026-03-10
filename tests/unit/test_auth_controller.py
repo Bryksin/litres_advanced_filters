@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime, timezone, timedelta
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from flask import Flask

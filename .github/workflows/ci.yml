@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run linter
+        run: poetry run ruff check .
+
+      - name: Run unit tests
+        run: poetry run python -m pytest tests/unit/ -v
+
+      - name: Run endpoint integration tests
+        run: poetry run python -m pytest tests/integration/test_bulk_sync_endpoints.py -v -m integration

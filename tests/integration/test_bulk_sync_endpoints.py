@@ -8,7 +8,6 @@ Or together with bulk sync tests:
     pytest tests/integration/ -v -s -m integration
 """
 
-import time
 import pytest
 from datetime import datetime, timezone
 from unittest.mock import patch

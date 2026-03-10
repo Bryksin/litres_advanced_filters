@@ -101,7 +101,7 @@ class TestStaticFilesSkipped:
         """Requests to /static/ should not trigger user creation."""
         app, Factory = mw_app
         with app.test_client() as client:
-            resp = client.get("/static/nonexistent.css")
+            client.get("/static/nonexistent.css")
 
         # No users should have been created
         with Factory() as s:

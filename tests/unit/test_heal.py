@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
-from app.db.models import Book, BookGenre, BookNarrator, Genre, Person
+from app.db.models import Book, BookGenre, BookNarrator, Genre
 from app.scrapers.models import (
     Art,
     ArtPrices,
@@ -11,7 +11,6 @@ from app.scrapers.models import (
     PersonRef,
     ArtDetail,
     ArtGenreRef,
-    ArtSeriesRef,
 )
 
 

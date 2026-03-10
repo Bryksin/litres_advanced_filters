@@ -14,7 +14,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.db.base import Base
-from app.db.models import User, UserSettings, UserIgnoredBook, Book
+from app.db.models import UserSettings, UserIgnoredBook, Book
 
 
 @pytest.fixture

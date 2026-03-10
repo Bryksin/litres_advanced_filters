@@ -1,6 +1,5 @@
 """Tests for genre sync logging + retry (BUG-4 fix)."""
 
-import logging
 from unittest.mock import MagicMock, patch
 
 import httpx

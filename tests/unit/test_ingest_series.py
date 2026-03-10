@@ -3,12 +3,10 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from app.db.models import Book, BookSeries, Series
 from app.scrapers.models import Art, ArtPrices, ArtRating, PersonRef, SeriesBookEntry, SeriesPage
 from app.scrapers.arts import ArtDetail
-from app.scrapers.models import ArtGenreRef
 
 
 def _make_series_page(series_id: int, members: list[int]) -> SeriesPage:

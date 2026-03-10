@@ -3,7 +3,8 @@
 **Advanced audiobook filtering and discovery for LitRes**
 *Расширенные фильтры для поиска аудиокниг на ЛитРес*
 
-<!-- TODO: add screenshots -->
+[![CI](https://github.com/Bryksin/litres_advanced_filters/actions/workflows/ci.yml/badge.svg)](https://github.com/Bryksin/litres_advanced_filters/actions/workflows/ci.yml)
+[![Docker Hub](https://img.shields.io/docker/v/briksins/litres_advanced_filters?label=Docker%20Hub&sort=semver)](https://hub.docker.com/r/briksins/litres_advanced_filters)
 
 A self-hosted web app that extends LitRes audiobook filtering far beyond what the official site offers. Built for Russian-speaking audiobook listeners who browse the "Легкое чтение" genre and want better tools to find their next listen.
 
@@ -103,8 +104,12 @@ poetry run flask --app app run
 ### Option B: Docker
 
 ```bash
-# Build the image
+# Build the image locally
 ./bin/build_docker.sh
+
+# Or pull a pre-built image from Docker Hub (no build needed)
+docker pull briksins/litres_advanced_filters:latest
+# Then set: export IMAGE_NAME=briksins/litres_advanced_filters
 
 # Generate a secret key for session cookies
 export SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
@@ -337,6 +342,27 @@ Inside the container the sync CLI and admin endpoints work the same way.
 
 ---
 
+## Releasing a new version
+
+This project follows [Semantic Versioning](https://semver.org/) and [Conventional Commits](https://www.conventionalcommits.org/).
+
+| Commit prefix | Version bump | Example |
+|---------------|-------------|---------|
+| `feat:` | Minor (1.x.0) | New filter, new sync mode |
+| `fix:`, `perf:`, `docs:` | Patch (1.0.x) | Bug fix, optimization, docs |
+| `BREAKING CHANGE:` in body | Major (x.0.0) | DB migration, config change |
+
+To release:
+
+1. Update `version` in `pyproject.toml`
+2. Commit: `git commit -am "release: v1.2.0"`
+3. Tag: `git tag v1.2.0`
+4. Push: `git push origin master --tags`
+
+GitHub Actions will run tests, then build and publish the Docker image to Docker Hub.
+
+---
+
 ## Running tests
 
 ### Unit tests (no network, fast)
@@ -459,3 +485,7 @@ docs/
 - httpx (HTTP client), BeautifulSoup4 (HTML parsing)
 - Gunicorn (production), Poetry (dependency management)
 - Docker (optional deployment)
+
+---
+
+*100% vibe-coded with [Claude Code](https://claude.ai/code) (Opus 4.6) by Anthropic. The human mass-approved permission prompts and mass-clicked "looks good" on code reviews.*

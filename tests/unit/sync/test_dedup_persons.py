@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session as SASession
 
 from app.db.base import Base
-from app.db.models import Book, BookAuthor, BookGenre, BookNarrator, Genre, Person
+from app.db.models import Book, BookAuthor, BookNarrator, Genre
 from app.scrapers.models import (
     ArtDetail,
     ArtGenreRef,

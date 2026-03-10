@@ -6,12 +6,11 @@ RateLimitedClient is never called in these tests — arts_detail is passed direc
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-import pytest
 
 from app.db.models import Book, BookAuthor, BookGenre, BookNarrator, Person, Genre
 from app.scrapers.models import Art, ArtPrices, ArtRating, PersonRef
 from app.scrapers.arts import ArtDetail
-from app.scrapers.models import ArtGenreRef, ArtSeriesRef
+from app.scrapers.models import ArtGenreRef
 
 
 def _make_art(art_id: int = 100, title: str = "Test Book") -> Art:
@@ -79,7 +78,7 @@ def test_ingest_book_new_creates_persons_and_junctions(db_session):
     art = _make_art(art_id=101)
     detail = _make_detail(art)
 
-    ingest_book(db_session, client=MagicMock(), art=art, arts_detail=detail)  # noqa: result unused
+    ingest_book(db_session, client=MagicMock(), art=art, arts_detail=detail)
 
     assert db_session.get(Person, 1) is not None
     assert db_session.get(Person, 2) is not None
