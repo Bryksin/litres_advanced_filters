@@ -28,7 +28,6 @@ persistent/sync/*.jsonl
 # AI / IDE / OS
 .claude/
 .cursor/
-CLAUDE.md
 .idea/
 .vscode/
 *.swp
