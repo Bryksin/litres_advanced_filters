@@ -299,6 +299,7 @@ class UserSettings(Base):
     excluded_authors_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     rating_min: Mapped[float | None] = mapped_column(Float, nullable=True)
     rating_max: Mapped[float | None] = mapped_column(Float, nullable=True)
+    rating_count_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
     exclude_narrators: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     excluded_narrators_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     series_min: Mapped[int | None] = mapped_column(Integer, nullable=True)

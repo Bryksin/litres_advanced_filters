@@ -132,6 +132,8 @@ def _build_filtered_book_query(
         q = q.filter(Book.rating_avg >= query.rating_min)
     if query.rating_max is not None:
         q = q.filter(Book.rating_avg <= query.rating_max)
+    # rating_count_min is applied post-grouping in _get_paginated_card_groups()
+    # so it filters on SUM(rating_count), matching the displayed total for series.
 
     # Ignore list (F-9)
     ignored_books = (
@@ -166,7 +168,8 @@ def _build_filtered_book_query(
 
 
 def _get_paginated_card_groups(session, base_q, sort_key, page, page_size,
-                               series_min=None, series_max=None):
+                               series_min=None, series_max=None,
+                               rating_count_min=None):
     """SQL-level grouping and pagination.
 
     Groups filtered books by series_id (for series books) or book.id (for standalones).
@@ -203,11 +206,16 @@ def _get_paginated_card_groups(session, base_q, sort_key, page, page_size,
     if series_max is not None:
         groups_q = groups_q.having(func.count() <= series_max)
 
+    # Min votes filter — on SUM(rating_count) so series use total, matching display
+    if rating_count_min is not None:
+        groups_q = groups_q.having(
+            func.sum(func.coalesce(Book.rating_count, 0)) >= rating_count_min
+        )
+
     # Apply sort
-    # Floor to 1 decimal to match Python's "%.1f" display rounding.
-    # SQLite round(4.85,1)=4.9 but Python "%.1f"%4.85="4.8" — using
-    # CAST(x*10 AS INTEGER)/10.0 ensures sort buckets match displayed values.
-    _display_rating = (func.cast(func.avg(Book.rating_avg) * 10, Integer) / 10.0)
+    # Round to 1 decimal for display-bucket sort. Use SQL round() which matches
+    # Python round() for all practical values. The template also uses round().
+    _display_rating = func.round(func.avg(Book.rating_avg), 1)
 
     if sort_key == "rating_avg_desc":
         groups_q = groups_q.order_by(
@@ -282,8 +290,22 @@ def _load_card_details(session, page_groups):
 
         # Store aggregated data from the group query
         for row in series_groups:
-            series_book_counts[row.group_key] = row.book_count
             series_rating_data[row.group_key] = (row.avg_rating, int(row.total_rating_count))
+
+        # Total audiobook count per series (unfiltered) for display
+        total_counts = (
+            session.query(
+                BookSeries.series_id,
+                func.count().label("cnt"),
+            )
+            .join(Book, Book.id == BookSeries.book_id)
+            .filter(BookSeries.series_id.in_(series_ids))
+            .filter(Book.art_type == 1)
+            .group_by(BookSeries.series_id)
+            .all()
+        )
+        for row_tc in total_counts:
+            series_book_counts[row_tc.series_id] = row_tc.cnt
 
         # Find first book per series (lowest position_in_series, fallback to min book_id)
         # Get all book_series rows for these series
@@ -348,7 +370,7 @@ def _load_card_details(session, page_groups):
                 rating_avg=round(avg_rating, 1) if avg_rating else None,
                 rating_count=total_rc,
                 series_id=sid,
-                book_count=row.book_count,
+                book_count=series_book_counts.get(sid, row.book_count),
                 authors=_sorted_author_names(first_book.book_authors) if first_book else [],
                 release_date=row.max_release_date,
             ))
@@ -361,7 +383,7 @@ def _load_card_details(session, page_groups):
                 title=book.title,
                 cover_url=book.cover_url,
                 url=_abs_url(book.url),
-                rating_avg=book.rating_avg,
+                rating_avg=round(book.rating_avg, 1) if book.rating_avg else None,
                 rating_count=book.rating_count or 0,
                 book_id=book.id,
                 authors=_sorted_author_names(book.book_authors),
@@ -490,6 +512,7 @@ def get_catalog(
     page_groups, total_count = _get_paginated_card_groups(
         session, base_q, query.sort, query.page, query.page_size,
         series_min=query.series_min, series_max=query.series_max,
+        rating_count_min=query.rating_count_min,
     )
 
     cards = _load_card_details(session, page_groups)

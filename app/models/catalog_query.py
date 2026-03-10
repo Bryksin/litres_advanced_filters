@@ -27,6 +27,7 @@ class CatalogQuery:
     # Rating
     rating_min: float | None = None
     rating_max: float | None = None
+    rating_count_min: int | None = None
 
     # Listened filters (require profile sync)
     hide_listened: bool = False

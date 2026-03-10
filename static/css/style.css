@@ -356,6 +356,15 @@ button, input, select { font-family: inherit; }
   padding: 0.3rem 0.4rem;
   text-align: center;
 }
+.f-inline-pair--triple {
+  grid-template-columns: 1fr 1fr 1fr;
+  max-width: 14rem;
+}
+.f-inline-pair--triple input[type="number"] {
+  max-width: 3.5rem;
+  min-height: unset;
+  padding: 0.25rem 0.2rem;
+}
 
 /* Narrator chips */
 .narrator-chips {

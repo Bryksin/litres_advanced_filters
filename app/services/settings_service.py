@@ -34,6 +34,7 @@ class SettingsService:
             excluded_narrators=json.loads(row.excluded_narrators_json or "[]"),
             rating_min=row.rating_min,
             rating_max=row.rating_max,
+            rating_count_min=row.rating_count_min,
             hide_listened=bool(row.hide_listened),
             incomplete_series_only=bool(row.incomplete_series_only),
         )
@@ -54,6 +55,7 @@ class SettingsService:
         row.excluded_narrators_json = '["Литрес Авточтец"]'
         row.rating_min = None
         row.rating_max = None
+        row.rating_count_min = None
         row.hide_listened = False
         row.incomplete_series_only = False
         row.updated_at = datetime.now(timezone.utc)
@@ -79,6 +81,7 @@ class SettingsService:
         row.excluded_narrators_json = json.dumps(query.excluded_narrators)
         row.rating_min = query.rating_min
         row.rating_max = query.rating_max
+        row.rating_count_min = query.rating_count_min
         row.hide_listened = query.hide_listened
         row.incomplete_series_only = query.incomplete_series_only
         row.updated_at = datetime.now(timezone.utc)

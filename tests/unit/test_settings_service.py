@@ -34,6 +34,7 @@ def test_get_loads_all_fields(db_session):
         excluded_narrators_json=json.dumps(["Литрес Авточтец"]),
         rating_min=3.5,
         rating_max=5.0,
+        rating_count_min=20,
     ))
     db_session.flush()
 
@@ -50,6 +51,7 @@ def test_get_loads_all_fields(db_session):
     assert q.excluded_narrators == ["Литрес Авточтец"]
     assert q.rating_min == 3.5
     assert q.rating_max == 5.0
+    assert q.rating_count_min == 20
 
 
 def test_save_persists_all_fields(db_session):
@@ -65,6 +67,7 @@ def test_save_persists_all_fields(db_session):
         exclude_narrators=True,
         excluded_narrators=["Авточтец"],
         rating_min=4.0,
+        rating_count_min=15,
     )
     svc.save(q)
 
@@ -74,4 +77,5 @@ def test_save_persists_all_fields(db_session):
     assert row.exclude_narrators is True
     assert json.loads(row.excluded_narrators_json) == ["Авточтец"]
     assert row.rating_min == 4.0
+    assert row.rating_count_min == 15
     assert row.updated_at is not None

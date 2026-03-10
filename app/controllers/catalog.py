@@ -38,6 +38,7 @@ def index():
                 query.excluded_narrators = _parse_json_list(request.args.get("excluded_narrators_json", "[]"))
             query.rating_min = _float_or_none(request.args.get("rating_min"))
             query.rating_max = _float_or_none(request.args.get("rating_max"))
+            query.rating_count_min = _int_or_none(request.args.get("rating_count_min"))
             query.hide_listened = "hide_listened" in request.args
             query.incomplete_series_only = "incomplete_series_only" in request.args
             # Mutually exclusive: incomplete_series_only wins if both sent

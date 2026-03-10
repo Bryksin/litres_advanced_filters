@@ -202,6 +202,25 @@ def test_rating_max(seeded_session):
             assert card.rating_avg <= 3.5
 
 
+# --- Minimum votes filter ---
+
+def test_rating_count_min(seeded_session):
+    """rating_count_min=200 excludes books with fewer votes."""
+    # Standalone rating_counts: 100, 200, 300, 400, 500
+    # Alpha series: 200 each (600 summed), Beta series: 50+30=80 summed
+    result = get_catalog(seeded_session, CatalogQuery(rating_count_min=200))
+    # Should exclude: standalone 1 (100 votes), Beta series (50 and 30 each < 200)
+    for card in result.cards:
+        if card.type == "book":
+            assert card.rating_count >= 200
+
+
+def test_rating_count_min_none_means_no_filter(seeded_session):
+    """When rating_count_min is None, no vote-count filter is applied."""
+    result = get_catalog(seeded_session, CatalogQuery(rating_count_min=None))
+    assert result.total_count == 7  # all cards
+
+
 # --- Ignore list (F-9) ---
 
 def test_ignore_list(seeded_session):

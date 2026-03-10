@@ -177,7 +177,7 @@
         {# ─── Рейтинг ─── #}
         <span class="sidebar__section">Рейтинг</span>
         <div class="sidebar__filter-body">
-          <div class="f-inline-pair f-inline-pair--compact">
+          <div class="f-inline-pair f-inline-pair--compact f-inline-pair--triple">
             <div class="f-control">
               <label for="f-rating-min" title="Минимальный средний рейтинг книги (от 0 до 5)">От</label>
               <input type="number" id="f-rating-min" name="rating_min" min="0" max="5" step="0.5" placeholder="0"{{ ' value=%.1f'|format(settings.rating_min) if settings and settings.rating_min is not none }}>
@@ -185,6 +185,10 @@
             <div class="f-control">
               <label for="f-rating-max" title="Максимальный средний рейтинг книги (от 0 до 5)">До</label>
               <input type="number" id="f-rating-max" name="rating_max" min="0" max="5" step="0.5" placeholder="5"{{ ' value=%.1f'|format(settings.rating_max) if settings and settings.rating_max is not none }}>
+            </div>
+            <div class="f-control">
+              <label for="f-rating-count-min" title="Минимальное количество голосов (оценок)">Голоса</label>
+              <input type="number" id="f-rating-count-min" name="rating_count_min" min="0" step="1" placeholder="0"{{ ' value=%d'|format(settings.rating_count_min) if settings and settings.rating_count_min is not none }}>
             </div>
           </div>
         </div>
@@ -391,6 +395,8 @@
     if (ratingMin && ratingMin.value !== '') params.set('rating_min', ratingMin.value);
     var ratingMax = document.getElementById('f-rating-max');
     if (ratingMax && ratingMax.value !== '') params.set('rating_max', ratingMax.value);
+    var ratingCountMin = document.getElementById('f-rating-count-min');
+    if (ratingCountMin && ratingCountMin.value !== '') params.set('rating_count_min', ratingCountMin.value);
 
     // F-5: Hide listened
     var hideListenedCb = document.getElementById('f-hide-listened');
@@ -524,7 +530,7 @@
   });
 
   // ── Auto-submit on number input change (debounced) ──
-  ['f-series-min', 'f-series-max', 'f-rating-min', 'f-rating-max'].forEach(function(id) {
+  ['f-series-min', 'f-series-max', 'f-rating-min', 'f-rating-max', 'f-rating-count-min'].forEach(function(id) {
     var inp = document.getElementById(id);
     if (inp) inp.addEventListener('change', function() { autoSubmit(300); });
   });
