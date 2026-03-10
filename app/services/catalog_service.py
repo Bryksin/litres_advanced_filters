@@ -90,17 +90,29 @@ def _build_filtered_book_query(
     elif query.standalones_only:
         q = q.filter(~has_series)
 
-    # Series size filter
+    # Series size filter — count actual audiobooks in our DB, not LitRes book_count
+    # (LitRes book_count includes all formats: ebooks, PDFs, etc.)
     if query.series_only and (query.series_min is not None or query.series_max is not None):
-        series_size_sub = (
-            session.query(BookSeries.book_id)
-            .join(Series, Series.id == BookSeries.series_id)
+        actual_count = (
+            session.query(
+                BookSeries.series_id,
+                func.count().label("cnt"),
+            )
+            .group_by(BookSeries.series_id)
         )
         if query.series_min is not None:
-            series_size_sub = series_size_sub.filter(Series.book_count >= query.series_min)
+            actual_count = actual_count.having(func.count() >= query.series_min)
         if query.series_max is not None:
-            series_size_sub = series_size_sub.filter(Series.book_count <= query.series_max)
-        q = q.filter(Book.id.in_(series_size_sub))
+            actual_count = actual_count.having(func.count() <= query.series_max)
+        matching_series = actual_count.subquery()
+        q = q.filter(
+            Book.id.in_(
+                session.query(BookSeries.book_id)
+                .filter(BookSeries.series_id.in_(
+                    session.query(matching_series.c.series_id)
+                ))
+            )
+        )
 
     # Full series under subscription (F-10)
     if query.series_only and query.full_series_subscription:
