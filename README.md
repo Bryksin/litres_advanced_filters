@@ -1,10 +1,10 @@
-# LitRes Advanced Filters
-
-**Advanced audiobook filtering and discovery for LitRes**
-*Расширенные фильтры для поиска аудиокниг на ЛитРес*
-
 [![CI](https://github.com/Bryksin/litres_advanced_filters/actions/workflows/ci.yml/badge.svg)](https://github.com/Bryksin/litres_advanced_filters/actions/workflows/ci.yml)
 [![Docker Hub](https://img.shields.io/docker/v/briksins/litres_advanced_filters?label=Docker%20Hub&sort=semver)](https://hub.docker.com/r/briksins/litres_advanced_filters)
+
+# LitRes Advanced Filters
+
+**Advanced audiobook filtering and discovery for LitRes**<br/>
+*Расширенные фильтры для поиска аудиокниг на ЛитРес*
 
 A self-hosted web app that extends LitRes audiobook filtering far beyond what the official site offers. Built for Russian-speaking audiobook listeners who browse the "Легкое чтение" genre and want better tools to find their next listen.
 
