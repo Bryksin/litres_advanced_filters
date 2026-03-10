@@ -82,10 +82,45 @@ LitRes API  ──────> Bulk sync crawls catalog  ──>  SQLite DB (~9
 
 ## Quick start
 
-### Option A: From source
+### Option A: Pull from Docker Hub (quickest)
 
 ```bash
-# Install dependencies
+# Pull the pre-built image
+docker pull briksins/litres_advanced_filters:latest
+
+# Generate a secret key for session cookies
+export SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
+
+# Run the container (port 5000, persistent/ mounted for DB storage)
+export IMAGE_NAME=briksins/litres_advanced_filters
+./bin/run_docker.sh
+
+# Open http://localhost:5000
+# Stop when done:
+./bin/stop_docker.sh
+```
+
+### Option B: Build Docker locally
+
+```bash
+# Clone the repo and build the image
+./bin/build_docker.sh
+
+# Generate a secret key for session cookies
+export SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
+
+# Run the container
+./bin/run_docker.sh
+
+# Open http://localhost:5000
+# Stop when done:
+./bin/stop_docker.sh
+```
+
+### Option C: Run from source
+
+```bash
+# Install dependencies (requires Python 3.14+ and Poetry)
 poetry install
 
 # Apply database migrations
@@ -101,33 +136,13 @@ poetry run python -m app.sync bulk --max-pages 10
 poetry run flask --app app run
 ```
 
-### Option B: Docker
+### Seed the database (Docker options A & B)
+
+After starting the container, seed and sync the database:
 
 ```bash
-# Build the image locally
-./bin/build_docker.sh
-
-# Or pull a pre-built image from Docker Hub (no build needed)
-docker pull briksins/litres_advanced_filters:latest
-# Then set: export IMAGE_NAME=briksins/litres_advanced_filters
-
-# Generate a secret key for session cookies
-export SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))")
-
-# Run the container (port 5000, persistent/ mounted for DB storage)
-./bin/run_docker.sh
-
-# Open http://localhost:5000 in your browser
-# Stop when done:
-./bin/stop_docker.sh
-```
-
-After starting (either option), seed and sync the database:
-
-```bash
-# Inside Docker, prefix commands with: docker exec -it litres-advanced-filters-app ...
-poetry run python -m app.sync genres
-poetry run python -m app.sync bulk --max-pages 10
+docker exec -it litres-advanced-filters-app python -m app.sync genres
+docker exec -it litres-advanced-filters-app python -m app.sync bulk --max-pages 10
 ```
 
 ---
