@@ -1,0 +1,66 @@
+# Virtual environment
+.venv/
+venv/
+env/
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Environment and secrets
+.env
+.env.local
+*.env
+
+# Persistent data
+persistent/db/*.db
+persistent/db/backup/*.db
+persistent/sync/*.jsonl
+
+# AI / IDE / OS
+.claude/
+.cursor/
+CLAUDE.md
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Testing / linting
+.coverage
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.tox/
+tests/litres_test.db
+
+# Research scripts (contain credentials, not needed for the app)
+scripts/
+capture_*
+playwright.config.js
+skills-lock.js
+skills-lock.json
+
+# Node (only used by research scripts, not the app)
+package.json
+package-lock.json
+
+# Test DB artifacts
+tests/litres_test.db
+tests/litres_delta_test.db
+
+# Docs (internal development notes, not public)
+docs/
+
+# Misc
+*.log
+*.bak

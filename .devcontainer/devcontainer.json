@@ -1,0 +1,120 @@
+{
+  "name": "Dev Container",
+  "build": {
+    "dockerfile": "../docker/dev/Dockerfile",
+    "context": "..",
+    "options": [
+      "-t",
+      "${localWorkspaceFolderBasename}-devcontainer"
+    ],
+    "args": {
+      "WORKSPACE_NAME": "${localWorkspaceFolderBasename}"
+    }
+  },
+  "workspaceFolder": "/home/appuser/${localWorkspaceFolderBasename}",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/appuser/${localWorkspaceFolderBasename},type=bind,consistency=cached",
+  "remoteUser": "appuser",
+  "updateRemoteUserUID": true,
+  "shutdownAction": "stopContainer",
+  "runArgs": [
+    "--name",
+    "${localWorkspaceFolderBasename}-devcontainer",
+    "--hostname",
+    "devcontainer",
+    "--tmpfs", "/home/appuser/.claude/cache:uid=10101,gid=10101",
+    "--tmpfs", "/home/appuser/.claude/session-env:uid=10101,gid=10101",
+    "--tmpfs", "/home/appuser/.claude/ide:uid=10101,gid=10101"
+  ],
+  "mounts": [
+    {
+      "source": "/var/run/docker.sock",
+      "target": "/var/run/docker.sock",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:USERPROFILE}/.cursor",
+      "target": "/home/appuser/.cursor",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:USERPROFILE}/.agents",
+      "target": "/home/appuser/.agents",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:USERPROFILE}/.ssh",
+      "target": "/home/appuser/.ssh",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:USERPROFILE}/.claude",
+      "target": "/home/appuser/.claude",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:USERPROFILE}/.claude.json",
+      "target": "/home/appuser/.claude.json",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:USERPROFILE}/.agents/skills",
+      "target": "/home/appuser/.claude/skills",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:USERPROFILE}/.cursor/commands",
+      "target": "/home/appuser/.claude/commands",
+      "type": "bind"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anysphere.cursorpyright",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "ms-python.vscode-pylance",
+        "ms-azuretools.vscode-docker",
+        "ms-python.vscode-python-envs",
+        "streetsidesoftware.code-spell-checker",
+        "anysphere.remote-containers",
+        "PKief.material-icon-theme",
+        "alefragnani.project-manager",
+        "bmalehorn.shell-syntax",
+        "makefile-tools",
+        "ms-playwright.playwright",
+        "anthropic.claude-code",
+        "qwtel.sqlite-viewer"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/home/appuser/${localWorkspaceFolderBasename}/.venv/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "python.analysis.typeCheckingMode": "basic",
+        "python.formatting.provider": "black",
+        "terminal.integrated.defaultProfile.linux": "tmux",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash"
+          },
+          "tmux": {
+            "path": "/usr/bin/tmux",
+            "args": ["new-session", "-A", "-s", "main"]
+          }
+        },
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": true
+        },
+        "editor.cursorBlinking": "expand",
+        "editor.cursorSmoothCaretAnimation": "on",
+        "editor.smoothScrolling": true,
+        "editor.cursorStyle": "line",
+        "workbench.smoothScrolling": true,
+        "extensions.autoUpdate": true,
+        "extensions.autoCheckUpdates": true,
+        "extensions.ignoreRecommendations": false
+      }
+    }
+  },
+  "postStartCommand": "bash .devcontainer/post_create.sh"
+}

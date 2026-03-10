@@ -1,0 +1,2851 @@
+[
+  {
+    "id": "201583",
+    "parent_id": null,
+    "name": "Легкое чтение",
+    "slug": "legkoe-chtenie-201583",
+    "url": "/genre/legkoe-chtenie-201583/"
+  },
+  {
+    "id": "201591",
+    "parent_id": null,
+    "name": "Серьезное чтение",
+    "slug": "sereznoe-chtenie-201591",
+    "url": "/genre/sereznoe-chtenie-201591/"
+  },
+  {
+    "id": "201599",
+    "parent_id": null,
+    "name": "История",
+    "slug": "istoriya-201599",
+    "url": "/showroom/istoriya-201599/"
+  },
+  {
+    "id": "201607",
+    "parent_id": null,
+    "name": "Родителям",
+    "slug": "roditelyam-201607",
+    "url": "/genre/roditelyam-201607/"
+  },
+  {
+    "id": "201615",
+    "parent_id": null,
+    "name": "Спорт, здоровье, красота",
+    "slug": "sport-zdorove-krasota-201615",
+    "url": "/genre/sport-zdorove-krasota-201615/"
+  },
+  {
+    "id": "201623",
+    "parent_id": null,
+    "name": "Знания и навыки",
+    "slug": "znaniya-navyki-201623",
+    "url": "/genre/znaniya-navyki-201623/"
+  },
+  {
+    "id": "201631",
+    "parent_id": null,
+    "name": "Психология, мотивация",
+    "slug": "psihologiya-motivaciya-201631",
+    "url": "/genre/psihologiya-motivaciya-201631/"
+  },
+  {
+    "id": "201639",
+    "parent_id": null,
+    "name": "Хобби, досуг",
+    "slug": "hobbi-dosug-201639",
+    "url": "/genre/hobbi-dosug-201639/"
+  },
+  {
+    "id": "201647",
+    "parent_id": null,
+    "name": "Дом, дача",
+    "slug": "dom-dacha-201647",
+    "url": "/genre/dom-dacha-201647/"
+  },
+  {
+    "id": "201655",
+    "parent_id": null,
+    "name": "Публицистика и периодические издания",
+    "slug": "publicistika-periodicheskie-izdaniya-201655",
+    "url": "/genre/publicistika-periodicheskie-izdaniya-201655/"
+  },
+  {
+    "id": "274060",
+    "parent_id": null,
+    "name": "Комиксы и манга",
+    "slug": "komiksy-i-manga-274060",
+    "url": "/showroom/komiksy-i-manga-274060/"
+  },
+  {
+    "id": "5003",
+    "parent_id": null,
+    "name": "Бизнес-книги",
+    "slug": "biznes-5003",
+    "url": "/showroom/biznes-5003/"
+  },
+  {
+    "id": "5007",
+    "parent_id": null,
+    "name": "Детские книги",
+    "slug": "detskie-knigi-5007",
+    "url": "/showroom/detskie-knigi-5007/"
+  },
+  {
+    "id": "5016",
+    "parent_id": null,
+    "name": "Зарубежная литература",
+    "slug": "zarubezhnaya-literatura-5016",
+    "url": "/genre/zarubezhnaya-literatura-5016/"
+  },
+  {
+    "id": "201421",
+    "parent_id": "201413",
+    "name": "семья, дети, воспитание",
+    "slug": "ks-semya-deti-vospitanie-201421",
+    "url": "/genre/ks-semya-deti-vospitanie-201421/"
+  },
+  {
+    "id": "203026",
+    "parent_id": "201413",
+    "name": "личная эффективность / продуктивность",
+    "slug": "ks-lichnaya_effektivnost-203026",
+    "url": "/genre/ks-lichnaya_effektivnost-203026/"
+  },
+  {
+    "id": "203035",
+    "parent_id": "201413",
+    "name": "маркетинг и реклама",
+    "slug": "ks-marketing-i-reklama-203035",
+    "url": "/genre/ks-marketing-i-reklama-203035/"
+  },
+  {
+    "id": "203062",
+    "parent_id": "201413",
+    "name": "психология",
+    "slug": "ks-psihologiya-203062",
+    "url": "/genre/ks-psihologiya-203062/"
+  },
+  {
+    "id": "203071",
+    "parent_id": "201413",
+    "name": "переговоры и продажи",
+    "slug": "ks-peregovory-i-prodazhy-203071",
+    "url": "/genre/ks-peregovory-i-prodazhy-203071/"
+  },
+  {
+    "id": "203080",
+    "parent_id": "201413",
+    "name": "истории успеха и биографии",
+    "slug": "ks-istorii-uspeha-i-biografii-203080",
+    "url": "/genre/ks-istorii-uspeha-i-biografii-203080/"
+  },
+  {
+    "id": "203089",
+    "parent_id": "201413",
+    "name": "здоровый образ жизни / фитнес",
+    "slug": "ks-zdorovyy-obraz-zhizni-203089",
+    "url": "/genre/ks-zdorovyy-obraz-zhizni-203089/"
+  },
+  {
+    "id": "203098",
+    "parent_id": "201413",
+    "name": "бизнес-процессы / инновации",
+    "slug": "ks-biznes-processy-203098",
+    "url": "/genre/ks-biznes-processy-203098/"
+  },
+  {
+    "id": "203107",
+    "parent_id": "201413",
+    "name": "финансы, инвестиции, экономика",
+    "slug": "ks-finansy-investicii-ekonomika-203107",
+    "url": "/genre/ks-finansy-investicii-ekonomika-203107/"
+  },
+  {
+    "id": "203116",
+    "parent_id": "201413",
+    "name": "наука и технологии",
+    "slug": "ks-nauka-i-tehnologii-203116",
+    "url": "/genre/ks-nauka-i-tehnologii-203116/"
+  },
+  {
+    "id": "174918",
+    "parent_id": "201583",
+    "name": "Young adult",
+    "slug": "young-adult-174918",
+    "url": "/showroom/young-adult-174918/"
+  },
+  {
+    "id": "201671",
+    "parent_id": "201583",
+    "name": "Классика жанра",
+    "slug": "klassika-zhanra-201671",
+    "url": "/genre/klassika-zhanra-201671/"
+  },
+  {
+    "id": "201926",
+    "parent_id": "201583",
+    "name": "Легкая проза",
+    "slug": "legkaya_proza-201926",
+    "url": "/genre/legkaya_proza-201926/"
+  },
+  {
+    "id": "5004",
+    "parent_id": "201583",
+    "name": "Фантастика",
+    "slug": "knigi-fantastika-5004",
+    "url": "/showroom/knigi-fantastika-5004/"
+  },
+  {
+    "id": "5005",
+    "parent_id": "201583",
+    "name": "Любовные романы",
+    "slug": "knigi-lubovnye-romany-5005",
+    "url": "/showroom/knigi-lubovnye-romany-5005/"
+  },
+  {
+    "id": "5006",
+    "parent_id": "201583",
+    "name": "Приключения",
+    "slug": "knigi-priklucheniya-5006",
+    "url": "/genre/knigi-priklucheniya-5006/"
+  },
+  {
+    "id": "5013",
+    "parent_id": "201583",
+    "name": "Юмористическая литература",
+    "slug": "knigi-umor-5013",
+    "url": "/genre/knigi-umor-5013/"
+  },
+  {
+    "id": "5014",
+    "parent_id": "201583",
+    "name": "Боевики, остросюжетная литература",
+    "slug": "knigi-boeviki-ostrosugetnaya-5014",
+    "url": "/genre/knigi-boeviki-ostrosugetnaya-5014/"
+  },
+  {
+    "id": "5017",
+    "parent_id": "201583",
+    "name": "Ужасы / мистика",
+    "slug": "knigi-uzhasy-mistika-5017",
+    "url": "/showroom/knigi-uzhasy-mistika-5017/"
+  },
+  {
+    "id": "5018",
+    "parent_id": "201583",
+    "name": "Фэнтези",
+    "slug": "knigi-fentezi-5018",
+    "url": "/showroom/knigi-fentezi-5018/"
+  },
+  {
+    "id": "5019",
+    "parent_id": "201583",
+    "name": "Фанфик",
+    "slug": "fanfik-5019",
+    "url": "/genre/fanfik-5019/"
+  },
+  {
+    "id": "5022",
+    "parent_id": "201583",
+    "name": "Детективы",
+    "slug": "knigi-detektivy-5022",
+    "url": "/showroom/knigi-detektivy-5022/"
+  },
+  {
+    "id": "5029",
+    "parent_id": "201583",
+    "name": "Эротика и секс",
+    "slug": "erotika-seks-5029",
+    "url": "/showroom/erotika-seks-5029/"
+  },
+  {
+    "id": "5082",
+    "parent_id": "201583",
+    "name": "Попаданцы",
+    "slug": "popadancy-5082",
+    "url": "/genre/popadancy-5082/"
+  },
+  {
+    "id": "201695",
+    "parent_id": "201591",
+    "name": "Пьесы, драматургия",
+    "slug": "pesy-dramaturgiya-201695",
+    "url": "/genre/pesy-dramaturgiya-201695/"
+  },
+  {
+    "id": "201711",
+    "parent_id": "201591",
+    "name": "Cтихи, поэзия",
+    "slug": "stihi-poeziya-201711",
+    "url": "/genre/stihi-poeziya-201711/"
+  },
+  {
+    "id": "201719",
+    "parent_id": "201591",
+    "name": "Об истории серьезно",
+    "slug": "ob-istorii-serezno-201719",
+    "url": "/genre/ob-istorii-serezno-201719/"
+  },
+  {
+    "id": "5015",
+    "parent_id": "201591",
+    "name": "Современная проза",
+    "slug": "knigi-sovremennaya-proza-5015",
+    "url": "/showroom/knigi-sovremennaya-proza-5015/"
+  },
+  {
+    "id": "5028",
+    "parent_id": "201591",
+    "name": "Классическая литература",
+    "slug": "klassicheskaya-literatura-5028",
+    "url": "/genre/klassicheskaya-literatura-5028/"
+  },
+  {
+    "id": "5169",
+    "parent_id": "201591",
+    "name": "Биографии и мемуары",
+    "slug": "biografii-memuary-5169",
+    "url": "/showroom/biografii-memuary-5169/"
+  },
+  {
+    "id": "201727",
+    "parent_id": "201599",
+    "name": "Популярно об истории",
+    "slug": "populyarno-ob-istorii-201727",
+    "url": "/genre/populyarno-ob-istorii-201727/"
+  },
+  {
+    "id": "5071",
+    "parent_id": "201599",
+    "name": "Историческая фантастика",
+    "slug": "istoricheskaya-5071",
+    "url": "/genre/istoricheskaya-5071/"
+  },
+  {
+    "id": "5087",
+    "parent_id": "201599",
+    "name": "Исторические любовные романы",
+    "slug": "istoricheskiye-5087",
+    "url": "/genre/istoricheskiye-5087/"
+  },
+  {
+    "id": "5092",
+    "parent_id": "201599",
+    "name": "Морские приключения",
+    "slug": "morskie-5092",
+    "url": "/genre/morskie-5092/"
+  },
+  {
+    "id": "5094",
+    "parent_id": "201599",
+    "name": "Книги о путешествиях",
+    "slug": "puteshestviyah-5094",
+    "url": "/genre/puteshestviyah-5094/"
+  },
+  {
+    "id": "5095",
+    "parent_id": "201599",
+    "name": "Исторические приключения",
+    "slug": "istoricheskie-5095",
+    "url": "/genre/istoricheskie-5095/"
+  },
+  {
+    "id": "5170",
+    "parent_id": "201599",
+    "name": "Документальная литература",
+    "slug": "dokumentalnaya-literatura-5170",
+    "url": "/genre/dokumentalnaya-literatura-5170/"
+  },
+  {
+    "id": "5205",
+    "parent_id": "201599",
+    "name": "Книги о войне",
+    "slug": "knigi_o_voyne-5205",
+    "url": "/genre/knigi_o_voyne-5205/"
+  },
+  {
+    "id": "5209",
+    "parent_id": "201599",
+    "name": "Историческая литература",
+    "slug": "istoricheskaya-literatura-5209",
+    "url": "/genre/istoricheskaya-literatura-5209/"
+  },
+  {
+    "id": "5227",
+    "parent_id": "201599",
+    "name": "Историческое фэнтези",
+    "slug": "istoricheskoe-5227",
+    "url": "/genre/istoricheskoe-5227/"
+  },
+  {
+    "id": "5258",
+    "parent_id": "201599",
+    "name": "Исторические детективы",
+    "slug": "istoricheskie-5258",
+    "url": "/genre/istoricheskie-5258/"
+  },
+  {
+    "id": "201735",
+    "parent_id": "201607",
+    "name": "Здоровье детей",
+    "slug": "zdorovye-detey-201735",
+    "url": "/genre/zdorovye-detey-201735/"
+  },
+  {
+    "id": "5254",
+    "parent_id": "201607",
+    "name": "Детская психология",
+    "slug": "detskaya-5254",
+    "url": "/genre/detskaya-5254/"
+  },
+  {
+    "id": "5284",
+    "parent_id": "201607",
+    "name": "Воспитание детей",
+    "slug": "vospitanie-detey-5284",
+    "url": "/genre/vospitanie-detey-5284/"
+  },
+  {
+    "id": "201743",
+    "parent_id": "201615",
+    "name": "Медицина и здоровье",
+    "slug": "medicina-i-zdorove-201743",
+    "url": "/genre/medicina-i-zdorove-201743/"
+  },
+  {
+    "id": "201759",
+    "parent_id": "201615",
+    "name": "Спорт",
+    "slug": "sport-201759",
+    "url": "/genre/sport-201759/"
+  },
+  {
+    "id": "201767",
+    "parent_id": "201615",
+    "name": "Красота",
+    "slug": "krasota-201767",
+    "url": "/genre/krasota-201767/"
+  },
+  {
+    "id": "5310",
+    "parent_id": "201615",
+    "name": "Секс / секс-руководства",
+    "slug": "seksualnyye-rukovodstva-5310",
+    "url": "/genre/seksualnyye-rukovodstva-5310/"
+  },
+  {
+    "id": "5009",
+    "parent_id": "201623",
+    "name": "Словари, справочники",
+    "slug": "spravochniki-slovari-5009",
+    "url": "/genre/spravochniki-slovari-5009/"
+  },
+  {
+    "id": "5011",
+    "parent_id": "201623",
+    "name": "Эзотерика",
+    "slug": "knigi-ezoterika-5011",
+    "url": "/showroom/knigi-ezoterika-5011/"
+  },
+  {
+    "id": "5020",
+    "parent_id": "201623",
+    "name": "Культура и искусство",
+    "slug": "knigi-iskusstvo-5020",
+    "url": "/genre/knigi-iskusstvo-5020/"
+  },
+  {
+    "id": "5024",
+    "parent_id": "201623",
+    "name": "Компьютерная литература",
+    "slug": "kompyuternaya-literatura-5024",
+    "url": "/showroom/kompyuternaya-literatura-5024/"
+  },
+  {
+    "id": "5030",
+    "parent_id": "201623",
+    "name": "Учебная и научная литература",
+    "slug": "uchebnaya-nauchnaya-literatura-5030",
+    "url": "/genre/uchebnaya-nauchnaya-literatura-5030/"
+  },
+  {
+    "id": "5031",
+    "parent_id": "201623",
+    "name": "Научно-популярная литература",
+    "slug": "nauchno-populyarnaya-literatura-5031",
+    "url": "/showroom/nauchno-populyarnaya-literatura-5031/"
+  },
+  {
+    "id": "5163",
+    "parent_id": "201623",
+    "name": "Путеводители",
+    "slug": "putevoditeli-5163",
+    "url": "/genre/putevoditeli-5163/"
+  },
+  {
+    "id": "5253",
+    "parent_id": "201623",
+    "name": "Саморазвитие / личностный рост",
+    "slug": "samorazvitiye-lichnostnyy-rost-5253",
+    "url": "/showroom/samorazvitiye-lichnostnyy-rost-5253/"
+  },
+  {
+    "id": "53055",
+    "parent_id": "201623",
+    "name": "Истории из жизни",
+    "slug": "istorii-iz-zhizni-53055",
+    "url": "/genre/istorii-iz-zhizni-53055/"
+  },
+  {
+    "id": "6356",
+    "parent_id": "201623",
+    "name": "Изучение языков",
+    "slug": "izuchenie-yazykov-6356",
+    "url": "/genre/izuchenie-yazykov-6356/"
+  },
+  {
+    "id": "5012",
+    "parent_id": "201631",
+    "name": "Религия и духовная литература",
+    "slug": "religiya-duhovnaya-literatura-5012",
+    "url": "/genre/religiya-duhovnaya-literatura-5012/"
+  },
+  {
+    "id": "5021",
+    "parent_id": "201631",
+    "name": "Книги по психологии",
+    "slug": "knigi-psihologiya-5021",
+    "url": "/genre/knigi-psihologiya-5021/"
+  },
+  {
+    "id": "209790",
+    "parent_id": "201639",
+    "name": "Интеллектуальные игры",
+    "slug": "intellektualnye-igry-209790",
+    "url": "/genre/intellektualnye-igry-209790/"
+  },
+  {
+    "id": "5179",
+    "parent_id": "201639",
+    "name": "Йога",
+    "slug": "yoga-5179",
+    "url": "/genre/yoga-5179/"
+  },
+  {
+    "id": "5216",
+    "parent_id": "201639",
+    "name": "Прикладная литература",
+    "slug": "prikladnaya-literatura-5216",
+    "url": "/genre/prikladnaya-literatura-5216/"
+  },
+  {
+    "id": "5236",
+    "parent_id": "201639",
+    "name": "Изобразительное искусство",
+    "slug": "izobrazitelnoe-iskusstvo-5236",
+    "url": "/genre/izobrazitelnoe-iskusstvo-5236/"
+  },
+  {
+    "id": "5237",
+    "parent_id": "201639",
+    "name": "Искусство фотографии",
+    "slug": "fotografiya-5237",
+    "url": "/genre/fotografiya-5237/"
+  },
+  {
+    "id": "5274",
+    "parent_id": "201639",
+    "name": "Природа и животные",
+    "slug": "priroda_i_zhivotnye-5274",
+    "url": "/genre/priroda_i_zhivotnye-5274/"
+  },
+  {
+    "id": "5275",
+    "parent_id": "201639",
+    "name": "Кулинария",
+    "slug": "kulinariya-5275",
+    "url": "/genre/kulinariya-5275/"
+  },
+  {
+    "id": "5276",
+    "parent_id": "201639",
+    "name": "Сделай сам",
+    "slug": "sdelay-sam-5276",
+    "url": "/genre/sdelay-sam-5276/"
+  },
+  {
+    "id": "5278",
+    "parent_id": "201639",
+    "name": "Спорт / фитнес",
+    "slug": "sport-fitnes-5278",
+    "url": "/genre/sport-fitnes-5278/"
+  },
+  {
+    "id": "5280",
+    "parent_id": "201639",
+    "name": "Рукоделие и ремесла",
+    "slug": "rukodeliye-remesla-5280",
+    "url": "/genre/rukodeliye-remesla-5280/"
+  },
+  {
+    "id": "5281",
+    "parent_id": "201639",
+    "name": "Развлечения",
+    "slug": "razvlecheniya-5281",
+    "url": "/genre/razvlecheniya-5281/"
+  },
+  {
+    "id": "5282",
+    "parent_id": "201639",
+    "name": "Сад и огород",
+    "slug": "sad-ogorod-5282",
+    "url": "/genre/sad-ogorod-5282/"
+  },
+  {
+    "id": "5283",
+    "parent_id": "201639",
+    "name": "Автомобили и ПДД",
+    "slug": "pdd-koap-shtrafy-5283",
+    "url": "/genre/pdd-koap-shtrafy-5283/"
+  },
+  {
+    "id": "5285",
+    "parent_id": "201639",
+    "name": "Мода и стиль",
+    "slug": "moda-stil-5285",
+    "url": "/genre/moda-stil-5285/"
+  },
+  {
+    "id": "5286",
+    "parent_id": "201639",
+    "name": "Охота",
+    "slug": "ohota-5286",
+    "url": "/genre/ohota-5286/"
+  },
+  {
+    "id": "5287",
+    "parent_id": "201639",
+    "name": "Хобби / увлечения",
+    "slug": "hobbi_uvlecheniya-5287",
+    "url": "/genre/hobbi_uvlecheniya-5287/"
+  },
+  {
+    "id": "5289",
+    "parent_id": "201639",
+    "name": "Отдых / туризм",
+    "slug": "otdykh-turizm-5289",
+    "url": "/genre/otdykh-turizm-5289/"
+  },
+  {
+    "id": "6825",
+    "parent_id": "201639",
+    "name": "Рыбалка",
+    "slug": "rybalka-6825",
+    "url": "/genre/rybalka-6825/"
+  },
+  {
+    "id": "201799",
+    "parent_id": "201647",
+    "name": "Комнатные растения",
+    "slug": "komnatnye-rasteniya-201799",
+    "url": "/genre/komnatnye-rasteniya-201799/"
+  },
+  {
+    "id": "201807",
+    "parent_id": "201647",
+    "name": "Домашнее хозяйство",
+    "slug": "domashnee-hozyaystvo-201807",
+    "url": "/genre/domashnee-hozyaystvo-201807/"
+  },
+  {
+    "id": "201815",
+    "parent_id": "201647",
+    "name": "Ремонт в квартире",
+    "slug": "remont-v-kvartire-201815",
+    "url": "/genre/remont-v-kvartire-201815/"
+  },
+  {
+    "id": "5187",
+    "parent_id": "201647",
+    "name": "Фэншуй / фэн-шуй",
+    "slug": "fen-shuy-5187",
+    "url": "/genre/fen-shuy-5187/"
+  },
+  {
+    "id": "5279",
+    "parent_id": "201647",
+    "name": "Домашние животные",
+    "slug": "domashnie-zhivotnye-5279",
+    "url": "/genre/domashnie-zhivotnye-5279/"
+  },
+  {
+    "id": "5288",
+    "parent_id": "201647",
+    "name": "Интерьеры",
+    "slug": "interyery-5288",
+    "url": "/genre/interyery-5288/"
+  },
+  {
+    "id": "5010",
+    "parent_id": "201655",
+    "name": "Публицистическая литература",
+    "slug": "knigi-publicisticheskaya-literatura-5010",
+    "url": "/genre/knigi-publicisticheskaya-literatura-5010/"
+  },
+  {
+    "id": "5027",
+    "parent_id": "201655",
+    "name": "Периодические издания",
+    "slug": "periodicheskie-izdaniya-5027",
+    "url": "/genre/periodicheskie-izdaniya-5027/"
+  },
+  {
+    "id": "201679",
+    "parent_id": "201671",
+    "name": "классика фэнтези",
+    "slug": "klassika-fentezi-201679",
+    "url": "/genre/klassika-fentezi-201679/"
+  },
+  {
+    "id": "201687",
+    "parent_id": "201671",
+    "name": "классические любовные романы",
+    "slug": "klassicheskie-lubovnye-romany-201687",
+    "url": "/genre/klassicheskie-lubovnye-romany-201687/"
+  },
+  {
+    "id": "56305",
+    "parent_id": "201671",
+    "name": "классика фантастики",
+    "slug": "klassika-fantastiki-56305",
+    "url": "/genre/klassika-fantastiki-56305/"
+  },
+  {
+    "id": "201703",
+    "parent_id": "201695",
+    "name": "русская драматургия",
+    "slug": "russkaya-dramaturgiya-201703",
+    "url": "/genre/russkaya-dramaturgiya-201703/"
+  },
+  {
+    "id": "5266",
+    "parent_id": "201695",
+    "name": "пьесы и драматургия",
+    "slug": "dramaturgiya-5266",
+    "url": "/genre/dramaturgiya-5266/"
+  },
+  {
+    "id": "10815",
+    "parent_id": "201711",
+    "name": "русская поэзия",
+    "slug": "russkaya-poeziya-10815",
+    "url": "/genre/russkaya-poeziya-10815/"
+  },
+  {
+    "id": "5267",
+    "parent_id": "201711",
+    "name": "стихи и поэзия",
+    "slug": "poeziya-5267",
+    "url": "/genre/poeziya-5267/"
+  },
+  {
+    "id": "201751",
+    "parent_id": "201743",
+    "name": "популярно о медицине",
+    "slug": "populyarno-o-medicine-201751",
+    "url": "/genre/populyarno-o-medicine-201751/"
+  },
+  {
+    "id": "5290",
+    "parent_id": "201743",
+    "name": "похудение и диеты",
+    "slug": "pokhudeniye-diyety-5290",
+    "url": "/genre/pokhudeniye-diyety-5290/"
+  },
+  {
+    "id": "6439",
+    "parent_id": "201743",
+    "name": "народная и нетрадиционная медицина",
+    "slug": "narodnaya-medicina-6439",
+    "url": "/genre/narodnaya-medicina-6439/"
+  },
+  {
+    "id": "6449",
+    "parent_id": "201743",
+    "name": "здоровье",
+    "slug": "home_health-6449",
+    "url": "/genre/home_health-6449/"
+  },
+  {
+    "id": "6859",
+    "parent_id": "201743",
+    "name": "альтернативная медицина",
+    "slug": "alternativnaya_medicina-6859",
+    "url": "/genre/alternativnaya_medicina-6859/"
+  },
+  {
+    "id": "6866",
+    "parent_id": "201743",
+    "name": "здоровое и правильное питание",
+    "slug": "pravilnoe_pitanie-6866",
+    "url": "/genre/pravilnoe_pitanie-6866/"
+  },
+  {
+    "id": "6580",
+    "parent_id": "201767",
+    "name": "косметика и косметология",
+    "slug": "kosmetika_kosmetologiya-6580",
+    "url": "/genre/kosmetika_kosmetologiya-6580/"
+  },
+  {
+    "id": "6616",
+    "parent_id": "201767",
+    "name": "парикмахерское дело",
+    "slug": "parikmaherskoe-delo-6616",
+    "url": "/genre/parikmaherskoe-delo-6616/"
+  },
+  {
+    "id": "6852",
+    "parent_id": "201767",
+    "name": "прически / уход за волосами",
+    "slug": "pricheski-6852",
+    "url": "/genre/pricheski-6852/"
+  },
+  {
+    "id": "274063",
+    "parent_id": "274060",
+    "name": "Западные комиксы",
+    "slug": "zapadnye-komiksy-274063",
+    "url": "/genre/zapadnye-komiksy-274063/"
+  },
+  {
+    "id": "274066",
+    "parent_id": "274060",
+    "name": "Азиатские комиксы и манга",
+    "slug": "aziatskie-komiksy-274066",
+    "url": "/genre/aziatskie-komiksy-274066/"
+  },
+  {
+    "id": "274819",
+    "parent_id": "274060",
+    "name": "Комиксы и манга: другое",
+    "slug": "komiksy-i-manga-drugoe-274819",
+    "url": "/genre/komiksy-i-manga-drugoe-274819/"
+  },
+  {
+    "id": "275083",
+    "parent_id": "274060",
+    "name": "Вебтун",
+    "slug": "webtoon-275083",
+    "url": "/genre/webtoon-275083/"
+  },
+  {
+    "id": "276439",
+    "parent_id": "274060",
+    "name": "Азиатские новеллы",
+    "slug": "aziatskie-novelly-276439",
+    "url": "/genre/aziatskie-novelly-276439/"
+  },
+  {
+    "id": "276442",
+    "parent_id": "274060",
+    "name": "Детские комиксы",
+    "slug": "komiksy-dlya-detey-276442",
+    "url": "/genre/komiksy-dlya-detey-276442/"
+  },
+  {
+    "id": "276445",
+    "parent_id": "274060",
+    "name": "Нон-фикшн в комиксах",
+    "slug": "non-fikshn-v-komiksah-276445",
+    "url": "/genre/non-fikshn-v-komiksah-276445/"
+  },
+  {
+    "id": "276448",
+    "parent_id": "274060",
+    "name": "Руманга и рукомиксы",
+    "slug": "rumanga-i-rukomiksy-276448",
+    "url": "/genre/rumanga-i-rukomiksy-276448/"
+  },
+  {
+    "id": "201413",
+    "parent_id": "5003",
+    "name": "Краткое содержание",
+    "slug": "kratkoe-soderzhanie-201413",
+    "url": "/genre/kratkoe-soderzhanie-201413/"
+  },
+  {
+    "id": "210646",
+    "parent_id": "5003",
+    "name": "Бизнес-справочники",
+    "slug": "business-spravochniki-210646",
+    "url": "/genre/business-spravochniki-210646/"
+  },
+  {
+    "id": "5046",
+    "parent_id": "5003",
+    "name": "Поиск работы / карьера",
+    "slug": "poisk-raboty-karera-5046",
+    "url": "/genre/poisk-raboty-karera-5046/"
+  },
+  {
+    "id": "5047",
+    "parent_id": "5003",
+    "name": "Кадровый менеджмент",
+    "slug": "kadrovyj_menedzhment-5047",
+    "url": "/genre/kadrovyj_menedzhment-5047/"
+  },
+  {
+    "id": "5048",
+    "parent_id": "5003",
+    "name": "Маркетинг, PR, реклама",
+    "slug": "marketing-pr-reklama-5048",
+    "url": "/genre/marketing-pr-reklama-5048/"
+  },
+  {
+    "id": "5049",
+    "parent_id": "5003",
+    "name": "Банковское дело",
+    "slug": "bankovskoe-delo-5049",
+    "url": "/genre/bankovskoe-delo-5049/"
+  },
+  {
+    "id": "5050",
+    "parent_id": "5003",
+    "name": "Ценные бумаги / инвестиции",
+    "slug": "cennye-bumagi-investicii-5050",
+    "url": "/genre/cennye-bumagi-investicii-5050/"
+  },
+  {
+    "id": "5051",
+    "parent_id": "5003",
+    "name": "Бухучет / налогообложение / аудит",
+    "slug": "buhuchet-nalogooblozhenie-audit-5051",
+    "url": "/genre/buhuchet-nalogooblozhenie-audit-5051/"
+  },
+  {
+    "id": "5052",
+    "parent_id": "5003",
+    "name": "Экономика",
+    "slug": "ekonomika-5052",
+    "url": "/genre/ekonomika-5052/"
+  },
+  {
+    "id": "5053",
+    "parent_id": "5003",
+    "name": "Финансы",
+    "slug": "finansy-5053",
+    "url": "/genre/finansy-5053/"
+  },
+  {
+    "id": "5054",
+    "parent_id": "5003",
+    "name": "Отраслевые издания",
+    "slug": "otraslevye-izdaniya-5054",
+    "url": "/genre/otraslevye-izdaniya-5054/"
+  },
+  {
+    "id": "5055",
+    "parent_id": "5003",
+    "name": "Корпоративная культура",
+    "slug": "korporativnaya-kultura-5055",
+    "url": "/genre/korporativnaya-kultura-5055/"
+  },
+  {
+    "id": "5056",
+    "parent_id": "5003",
+    "name": "Личные финансы",
+    "slug": "lichnye-finansy-5056",
+    "url": "/genre/lichnye-finansy-5056/"
+  },
+  {
+    "id": "5057",
+    "parent_id": "5003",
+    "name": "Недвижимость",
+    "slug": "nedvizhimost-5057",
+    "url": "/genre/nedvizhimost-5057/"
+  },
+  {
+    "id": "5058",
+    "parent_id": "5003",
+    "name": "О бизнесе популярно",
+    "slug": "o-biznese-populyarno-5058",
+    "url": "/genre/o-biznese-populyarno-5058/"
+  },
+  {
+    "id": "5059",
+    "parent_id": "5003",
+    "name": "Малый и средний бизнес",
+    "slug": "malyy-biznes-5059",
+    "url": "/genre/malyy-biznes-5059/"
+  },
+  {
+    "id": "5060",
+    "parent_id": "5003",
+    "name": "Делопроизводство",
+    "slug": "deloproizvodstvo-5060",
+    "url": "/genre/deloproizvodstvo-5060/"
+  },
+  {
+    "id": "5061",
+    "parent_id": "5003",
+    "name": "Зарубежная деловая литература",
+    "slug": "zarubezhnaya-delovaya-literatura-5061",
+    "url": "/genre/zarubezhnaya-delovaya-literatura-5061/"
+  },
+  {
+    "id": "5062",
+    "parent_id": "5003",
+    "name": "Интернет-бизнес",
+    "slug": "internet-5062",
+    "url": "/genre/internet-5062/"
+  },
+  {
+    "id": "5063",
+    "parent_id": "5003",
+    "name": "Продажи",
+    "slug": "prodazhi-5063",
+    "url": "/genre/prodazhi-5063/"
+  },
+  {
+    "id": "5064",
+    "parent_id": "5003",
+    "name": "Личная эффективность",
+    "slug": "lichnaya-effektivnost-5064",
+    "url": "/genre/lichnaya-effektivnost-5064/"
+  },
+  {
+    "id": "5065",
+    "parent_id": "5003",
+    "name": "Тайм-менеджмент",
+    "slug": "taym-menedzhment-5065",
+    "url": "/genre/taym-menedzhment-5065/"
+  },
+  {
+    "id": "5066",
+    "parent_id": "5003",
+    "name": "Ораторское искусство / риторика",
+    "slug": "oratorskoye-iskusstvo-5066",
+    "url": "/genre/oratorskoye-iskusstvo-5066/"
+  },
+  {
+    "id": "5067",
+    "parent_id": "5003",
+    "name": "Переговоры",
+    "slug": "peregovory-5067",
+    "url": "/genre/peregovory-5067/"
+  },
+  {
+    "id": "5068",
+    "parent_id": "5003",
+    "name": "Стартапы и создание бизнеса",
+    "slug": "startapy-5068",
+    "url": "/genre/startapy-5068/"
+  },
+  {
+    "id": "5069",
+    "parent_id": "5003",
+    "name": "Работа с клиентами",
+    "slug": "kliyenty-5069",
+    "url": "/genre/kliyenty-5069/"
+  },
+  {
+    "id": "5070",
+    "parent_id": "5003",
+    "name": "Менеджмент",
+    "slug": "menedzhment-5070",
+    "url": "/genre/menedzhment-5070/"
+  },
+  {
+    "id": "5375",
+    "parent_id": "5003",
+    "name": "Логистика",
+    "slug": "logistika-5375",
+    "url": "/genre/logistika-5375/"
+  },
+  {
+    "id": "6462",
+    "parent_id": "5003",
+    "name": "Менеджмент и кадры",
+    "slug": "management_kadry_old-6462",
+    "url": "/genre/management_kadry_old-6462/"
+  },
+  {
+    "id": "6784",
+    "parent_id": "5003",
+    "name": "Государственное и муниципальное управление",
+    "slug": "gosudarstvennoe-i-munitsipalnoe-upravlenie-6784",
+    "url": "/genre/gosudarstvennoe-i-munitsipalnoe-upravlenie-6784/"
+  },
+  {
+    "id": "6810",
+    "parent_id": "5003",
+    "name": "Политическое управление",
+    "slug": "piliticheskoe-upravlenie-6810",
+    "url": "/genre/piliticheskoe-upravlenie-6810/"
+  },
+  {
+    "id": "5072",
+    "parent_id": "5004",
+    "name": "Киберпанк",
+    "slug": "kiberpank-5072",
+    "url": "/genre/kiberpank-5072/"
+  },
+  {
+    "id": "5073",
+    "parent_id": "5004",
+    "name": "Научная фантастика",
+    "slug": "nauchnaya-5073",
+    "url": "/genre/nauchnaya-5073/"
+  },
+  {
+    "id": "5074",
+    "parent_id": "5004",
+    "name": "Боевая фантастика",
+    "slug": "boevaya-fantastika-5074",
+    "url": "/genre/boevaya-fantastika-5074/"
+  },
+  {
+    "id": "5075",
+    "parent_id": "5004",
+    "name": "Героическая фантастика",
+    "slug": "geroicheskaya-5075",
+    "url": "/genre/geroicheskaya-5075/"
+  },
+  {
+    "id": "5076",
+    "parent_id": "5004",
+    "name": "Детективная фантастика",
+    "slug": "detektivnaya-5076",
+    "url": "/genre/detektivnaya-5076/"
+  },
+  {
+    "id": "5077",
+    "parent_id": "5004",
+    "name": "Космическая фантастика",
+    "slug": "kosmicheskaya-5077",
+    "url": "/genre/kosmicheskaya-5077/"
+  },
+  {
+    "id": "5078",
+    "parent_id": "5004",
+    "name": "Социальная фантастика",
+    "slug": "socialnaya-5078",
+    "url": "/genre/socialnaya-5078/"
+  },
+  {
+    "id": "5079",
+    "parent_id": "5004",
+    "name": "Юмористическая фантастика",
+    "slug": "umoristicheskaya-5079",
+    "url": "/genre/umoristicheskaya-5079/"
+  },
+  {
+    "id": "5084",
+    "parent_id": "5004",
+    "name": "Стимпанк",
+    "slug": "stimpank-5084",
+    "url": "/genre/stimpank-5084/"
+  },
+  {
+    "id": "5090",
+    "parent_id": "5004",
+    "name": "Любовно-фантастические романы",
+    "slug": "lyubovno-fantasticheskiye-5090",
+    "url": "/genre/lyubovno-fantasticheskiye-5090/"
+  },
+  {
+    "id": "5085",
+    "parent_id": "5005",
+    "name": "Современные любовные романы",
+    "slug": "sovremennyye-5085",
+    "url": "/genre/sovremennyye-5085/"
+  },
+  {
+    "id": "5086",
+    "parent_id": "5005",
+    "name": "Остросюжетные любовные романы",
+    "slug": "ostrosyuzhetnyye-5086",
+    "url": "/genre/ostrosyuzhetnyye-5086/"
+  },
+  {
+    "id": "5088",
+    "parent_id": "5005",
+    "name": "Короткие любовные романы",
+    "slug": "korotkiye-5088",
+    "url": "/genre/korotkiye-5088/"
+  },
+  {
+    "id": "5089",
+    "parent_id": "5005",
+    "name": "Эротические романы",
+    "slug": "eroticheskie_romany-5089",
+    "url": "/genre/eroticheskie_romany-5089/"
+  },
+  {
+    "id": "203025",
+    "parent_id": "5006",
+    "name": "классика приключенческой литературы",
+    "slug": "klassika_priklyuchenij-203025",
+    "url": "/genre/klassika_priklyuchenij-203025/"
+  },
+  {
+    "id": "6454",
+    "parent_id": "5006",
+    "name": "книги о приключениях",
+    "slug": "priklucheniya_knigi-6454",
+    "url": "/genre/priklucheniya_knigi-6454/"
+  },
+  {
+    "id": "5008",
+    "parent_id": "5007",
+    "name": "Школьные учебники",
+    "slug": "shkolnye-uchebniki-5008",
+    "url": "/genre/shkolnye-uchebniki-5008/"
+  },
+  {
+    "id": "5102",
+    "parent_id": "5007",
+    "name": "Внеклассное чтение",
+    "slug": "vneklassnoye-chteniye-5102",
+    "url": "/genre/vneklassnoye-chteniye-5102/"
+  },
+  {
+    "id": "5103",
+    "parent_id": "5007",
+    "name": "Учебная литература",
+    "slug": "uchebnaya-literatura-5103",
+    "url": "/genre/uchebnaya-literatura-5103/"
+  },
+  {
+    "id": "5104",
+    "parent_id": "5007",
+    "name": "Детская проза",
+    "slug": "proza-5104",
+    "url": "/genre/proza-5104/"
+  },
+  {
+    "id": "5105",
+    "parent_id": "5007",
+    "name": "Книги для подростков",
+    "slug": "dlya-podrostkov-5105",
+    "url": "/genre/dlya-podrostkov-5105/"
+  },
+  {
+    "id": "5106",
+    "parent_id": "5007",
+    "name": "Сказки",
+    "slug": "skazki-5106",
+    "url": "/genre/skazki-5106/"
+  },
+  {
+    "id": "5107",
+    "parent_id": "5007",
+    "name": "Детские приключения",
+    "slug": "priklucheniya-5107",
+    "url": "/genre/priklucheniya-5107/"
+  },
+  {
+    "id": "5108",
+    "parent_id": "5007",
+    "name": "Детская фантастика",
+    "slug": "fantastika-5108",
+    "url": "/genre/fantastika-5108/"
+  },
+  {
+    "id": "5109",
+    "parent_id": "5007",
+    "name": "Детские детективы",
+    "slug": "detektivy-5109",
+    "url": "/genre/detektivy-5109/"
+  },
+  {
+    "id": "5110",
+    "parent_id": "5007",
+    "name": "Детские стихи",
+    "slug": "stihi-5110",
+    "url": "/genre/stihi-5110/"
+  },
+  {
+    "id": "5111",
+    "parent_id": "5007",
+    "name": "Зарубежные детские книги",
+    "slug": "zarubezhnye-5111",
+    "url": "/genre/zarubezhnye-5111/"
+  },
+  {
+    "id": "5313",
+    "parent_id": "5007",
+    "name": "Буквари",
+    "slug": "bukvari-5313",
+    "url": "/genre/bukvari-5313/"
+  },
+  {
+    "id": "6481",
+    "parent_id": "5007",
+    "name": "Детская познавательная и развивающая литература",
+    "slug": "detskaya_pazvivayushaya_literatura-6481",
+    "url": "/genre/detskaya_pazvivayushaya_literatura-6481/"
+  },
+  {
+    "id": "6517",
+    "parent_id": "5007",
+    "name": "Книги для детей",
+    "slug": "children-6517",
+    "url": "/genre/children-6517/"
+  },
+  {
+    "id": "6610",
+    "parent_id": "5007",
+    "name": "Книги для дошкольников",
+    "slug": "knigi_doshkolniki-6610",
+    "url": "/genre/knigi_doshkolniki-6610/"
+  },
+  {
+    "id": "5152",
+    "parent_id": "5008",
+    "name": "учебники 9 класс",
+    "slug": "9-klass-5152",
+    "url": "/genre/9-klass-5152/"
+  },
+  {
+    "id": "5153",
+    "parent_id": "5008",
+    "name": "список школьной литературы 9 класс",
+    "slug": "spisok-literatury-9-klass-5153",
+    "url": "/genre/spisok-literatury-9-klass-5153/"
+  },
+  {
+    "id": "5154",
+    "parent_id": "5008",
+    "name": "учебники 10 класс",
+    "slug": "10-klass-5154",
+    "url": "/genre/10-klass-5154/"
+  },
+  {
+    "id": "5155",
+    "parent_id": "5008",
+    "name": "список школьной литературы 10-11 класс",
+    "slug": "spisok-literatury-10-11-klass-5155",
+    "url": "/genre/spisok-literatury-10-11-klass-5155/"
+  },
+  {
+    "id": "5156",
+    "parent_id": "5008",
+    "name": "учебники 11 класс",
+    "slug": "11-klass-5156",
+    "url": "/genre/11-klass-5156/"
+  },
+  {
+    "id": "5157",
+    "parent_id": "5008",
+    "name": "ЕГЭ",
+    "slug": "ege-5157",
+    "url": "/genre/ege-5157/"
+  },
+  {
+    "id": "5158",
+    "parent_id": "5008",
+    "name": "ГИА (ОГЭ, ГВЭ)",
+    "slug": "gia-oge-gve-5158",
+    "url": "/genre/gia-oge-gve-5158/"
+  },
+  {
+    "id": "5159",
+    "parent_id": "5008",
+    "name": "литература для внеклассного чтения",
+    "slug": "vneklassnoe-chteniya-5159",
+    "url": "/genre/vneklassnoe-chteniya-5159/"
+  },
+  {
+    "id": "5160",
+    "parent_id": "5008",
+    "name": "учебные программы",
+    "slug": "uchebnyye-programmy-5160",
+    "url": "/genre/uchebnyye-programmy-5160/"
+  },
+  {
+    "id": "5161",
+    "parent_id": "5008",
+    "name": "школьные методические пособия",
+    "slug": "metodicheskiye-posobiya-5161",
+    "url": "/genre/metodicheskiye-posobiya-5161/"
+  },
+  {
+    "id": "5164",
+    "parent_id": "5009",
+    "name": "руководства",
+    "slug": "rukovodstva-5164",
+    "url": "/genre/rukovodstva-5164/"
+  },
+  {
+    "id": "5165",
+    "parent_id": "5009",
+    "name": "справочники",
+    "slug": "spravochniki-5165",
+    "url": "/genre/spravochniki-5165/"
+  },
+  {
+    "id": "5166",
+    "parent_id": "5009",
+    "name": "энциклопедии",
+    "slug": "enciklopedii-5166",
+    "url": "/genre/enciklopedii-5166/"
+  },
+  {
+    "id": "5167",
+    "parent_id": "5009",
+    "name": "словари",
+    "slug": "slovari-5167",
+    "url": "/genre/slovari-5167/"
+  },
+  {
+    "id": "5316",
+    "parent_id": "5009",
+    "name": "самоучители",
+    "slug": "samouchiteli-5316",
+    "url": "/genre/samouchiteli-5316/"
+  },
+  {
+    "id": "6512",
+    "parent_id": "5009",
+    "name": "справочная литература",
+    "slug": "spravochnaya-literatura-6512",
+    "url": "/genre/spravochnaya-literatura-6512/"
+  },
+  {
+    "id": "5172",
+    "parent_id": "5010",
+    "name": "военное дело / спецслужбы",
+    "slug": "voennoe-delo-specsluzhby-5172",
+    "url": "/genre/voennoe-delo-specsluzhby-5172/"
+  },
+  {
+    "id": "5173",
+    "parent_id": "5010",
+    "name": "афоризмы и цитаты",
+    "slug": "aforizmy-i-citaty-5173",
+    "url": "/genre/aforizmy-i-citaty-5173/"
+  },
+  {
+    "id": "6491",
+    "parent_id": "5010",
+    "name": "публицистика",
+    "slug": "publicistika-6491",
+    "url": "/genre/publicistika-6491/"
+  },
+  {
+    "id": "5177",
+    "parent_id": "5011",
+    "name": "Астрология",
+    "slug": "astrologiya-5177",
+    "url": "/genre/astrologiya-5177/"
+  },
+  {
+    "id": "5178",
+    "parent_id": "5011",
+    "name": "Гадание / толкование снов",
+    "slug": "gadaniye-tolkovaniye-snov-5178",
+    "url": "/genre/gadaniye-tolkovaniye-snov-5178/"
+  },
+  {
+    "id": "5180",
+    "parent_id": "5011",
+    "name": "Магия / колдовство",
+    "slug": "magiya-koldovstvo-5180",
+    "url": "/genre/magiya-koldovstvo-5180/"
+  },
+  {
+    "id": "5181",
+    "parent_id": "5011",
+    "name": "Парапсихология",
+    "slug": "parapsikhologiya-5181",
+    "url": "/genre/parapsikhologiya-5181/"
+  },
+  {
+    "id": "5182",
+    "parent_id": "5011",
+    "name": "Практическая эзотерика",
+    "slug": "prakticheskaya-ezoterika-5182",
+    "url": "/genre/prakticheskaya-ezoterika-5182/"
+  },
+  {
+    "id": "5183",
+    "parent_id": "5011",
+    "name": "Современные религиозные течения",
+    "slug": "sovremennyye-religioznyye-techeniya-5183",
+    "url": "/genre/sovremennyye-religioznyye-techeniya-5183/"
+  },
+  {
+    "id": "5184",
+    "parent_id": "5011",
+    "name": "Спиритизм / пророчества / предсказания",
+    "slug": "spiritizm-prorochestva-predskazaniya-5184",
+    "url": "/genre/spiritizm-prorochestva-predskazaniya-5184/"
+  },
+  {
+    "id": "5188",
+    "parent_id": "5011",
+    "name": "Эзотерика / оккультизм",
+    "slug": "ezoterika-okkultizm-5188",
+    "url": "/genre/ezoterika-okkultizm-5188/"
+  },
+  {
+    "id": "5191",
+    "parent_id": "5012",
+    "name": "религии / верования / культы",
+    "slug": "religii_verovaniya_kulty-5191",
+    "url": "/genre/religii_verovaniya_kulty-5191/"
+  },
+  {
+    "id": "5192",
+    "parent_id": "5012",
+    "name": "христианство",
+    "slug": "khristianstvo-5192",
+    "url": "/genre/khristianstvo-5192/"
+  },
+  {
+    "id": "5193",
+    "parent_id": "5012",
+    "name": "ислам",
+    "slug": "islam-5193",
+    "url": "/genre/islam-5193/"
+  },
+  {
+    "id": "5194",
+    "parent_id": "5012",
+    "name": "буддизм",
+    "slug": "buddizm-5194",
+    "url": "/genre/buddizm-5194/"
+  },
+  {
+    "id": "5195",
+    "parent_id": "5012",
+    "name": "иудаизм",
+    "slug": "iudaizm-5195",
+    "url": "/genre/iudaizm-5195/"
+  },
+  {
+    "id": "5196",
+    "parent_id": "5012",
+    "name": "православное христианство",
+    "slug": "pravoslaviye-5196",
+    "url": "/genre/pravoslaviye-5196/"
+  },
+  {
+    "id": "5197",
+    "parent_id": "5012",
+    "name": "католицизм",
+    "slug": "katolitsizm-5197",
+    "url": "/genre/katolitsizm-5197/"
+  },
+  {
+    "id": "5198",
+    "parent_id": "5012",
+    "name": "протестантизм",
+    "slug": "protestantizm-5198",
+    "url": "/genre/protestantizm-5198/"
+  },
+  {
+    "id": "5609",
+    "parent_id": "5012",
+    "name": "христианское искусство",
+    "slug": "hristianskoe-iskusstvo-5609",
+    "url": "/genre/hristianskoe-iskusstvo-5609/"
+  },
+  {
+    "id": "5610",
+    "parent_id": "5012",
+    "name": "паломничество",
+    "slug": "palomnichestvo-5610",
+    "url": "/genre/palomnichestvo-5610/"
+  },
+  {
+    "id": "5199",
+    "parent_id": "5013",
+    "name": "юмористическая проза",
+    "slug": "umoristicheskaya-proza-5199",
+    "url": "/genre/umoristicheskaya-proza-5199/"
+  },
+  {
+    "id": "5200",
+    "parent_id": "5013",
+    "name": "юмористические стихи",
+    "slug": "umoristicheskie-stihi-5200",
+    "url": "/genre/umoristicheskie-stihi-5200/"
+  },
+  {
+    "id": "5201",
+    "parent_id": "5013",
+    "name": "анекдоты",
+    "slug": "anekdoty-5201",
+    "url": "/genre/anekdoty-5201/"
+  },
+  {
+    "id": "6496",
+    "parent_id": "5013",
+    "name": "юмор и сатира",
+    "slug": "umori_i_satira-6496",
+    "url": "/genre/umori_i_satira-6496/"
+  },
+  {
+    "id": "5093",
+    "parent_id": "5014",
+    "name": "вестерны",
+    "slug": "vesterny-5093",
+    "url": "/genre/vesterny-5093/"
+  },
+  {
+    "id": "5203",
+    "parent_id": "5014",
+    "name": "криминальные боевики",
+    "slug": "kriminalnye-boeviki-5203",
+    "url": "/genre/kriminalnye-boeviki-5203/"
+  },
+  {
+    "id": "5207",
+    "parent_id": "5014",
+    "name": "боевики",
+    "slug": "boeviki-5207",
+    "url": "/genre/boeviki-5207/"
+  },
+  {
+    "id": "5208",
+    "parent_id": "5015",
+    "name": "Контркультура",
+    "slug": "kontrkultura-5208",
+    "url": "/genre/kontrkultura-5208/"
+  },
+  {
+    "id": "5210",
+    "parent_id": "5015",
+    "name": "Современная русская литература",
+    "slug": "russkaya-literatura-5210",
+    "url": "/genre/russkaya-literatura-5210/"
+  },
+  {
+    "id": "5080",
+    "parent_id": "5016",
+    "name": "Зарубежная фантастика",
+    "slug": "zarubezhnaya-5080",
+    "url": "/genre/zarubezhnaya-5080/"
+  },
+  {
+    "id": "5091",
+    "parent_id": "5016",
+    "name": "Зарубежные любовные романы",
+    "slug": "zarubezhnyye-5091",
+    "url": "/genre/zarubezhnyye-5091/"
+  },
+  {
+    "id": "5096",
+    "parent_id": "5016",
+    "name": "Зарубежные приключения",
+    "slug": "zarubezhnye-5096",
+    "url": "/genre/zarubezhnye-5096/"
+  },
+  {
+    "id": "5168",
+    "parent_id": "5016",
+    "name": "Зарубежная справочная литература",
+    "slug": "zarubezhnye-5168",
+    "url": "/genre/zarubezhnye-5168/"
+  },
+  {
+    "id": "5171",
+    "parent_id": "5016",
+    "name": "Зарубежная публицистика",
+    "slug": "zarubezhnaya-5171",
+    "url": "/genre/zarubezhnaya-5171/"
+  },
+  {
+    "id": "5202",
+    "parent_id": "5016",
+    "name": "Зарубежный юмор",
+    "slug": "zarubezhnyy-umor-5202",
+    "url": "/genre/zarubezhnyy-umor-5202/"
+  },
+  {
+    "id": "5206",
+    "parent_id": "5016",
+    "name": "Зарубежные боевики",
+    "slug": "zarubezhnye-5206",
+    "url": "/genre/zarubezhnye-5206/"
+  },
+  {
+    "id": "5211",
+    "parent_id": "5016",
+    "name": "Современная зарубежная литература",
+    "slug": "zarubezhnaya-5211",
+    "url": "/genre/zarubezhnaya-5211/"
+  },
+  {
+    "id": "5212",
+    "parent_id": "5016",
+    "name": "Зарубежная драматургия",
+    "slug": "zarubezhnaya-dramaturgiya-5212",
+    "url": "/genre/zarubezhnaya-dramaturgiya-5212/"
+  },
+  {
+    "id": "5213",
+    "parent_id": "5016",
+    "name": "Зарубежная поэзия",
+    "slug": "zarubezhnaya_poeziya-5213",
+    "url": "/genre/zarubezhnaya_poeziya-5213/"
+  },
+  {
+    "id": "5214",
+    "parent_id": "5016",
+    "name": "Зарубежная классика",
+    "slug": "zarubezhnaya-klassika-5214",
+    "url": "/genre/zarubezhnaya-klassika-5214/"
+  },
+  {
+    "id": "5215",
+    "parent_id": "5016",
+    "name": "Зарубежная старинная литература",
+    "slug": "zarubezhnaya-starinnaya-5215",
+    "url": "/genre/zarubezhnaya-starinnaya-5215/"
+  },
+  {
+    "id": "5217",
+    "parent_id": "5016",
+    "name": "Зарубежная образовательная литература",
+    "slug": "zarubezhnaya-literatura-5217",
+    "url": "/genre/zarubezhnaya-literatura-5217/"
+  },
+  {
+    "id": "5218",
+    "parent_id": "5016",
+    "name": "Зарубежное фэнтези",
+    "slug": "zarubezhnye-5218",
+    "url": "/genre/zarubezhnye-5218/"
+  },
+  {
+    "id": "5219",
+    "parent_id": "5016",
+    "name": "Зарубежные детективы",
+    "slug": "zarubezhnye-5219",
+    "url": "/genre/zarubezhnye-5219/"
+  },
+  {
+    "id": "5220",
+    "parent_id": "5016",
+    "name": "Зарубежная психология",
+    "slug": "zarubezhnaya-5220",
+    "url": "/genre/zarubezhnaya-5220/"
+  },
+  {
+    "id": "5221",
+    "parent_id": "5016",
+    "name": "Зарубежная компьютерная литература",
+    "slug": "zarubezhnaya-5221",
+    "url": "/genre/zarubezhnaya-5221/"
+  },
+  {
+    "id": "6469",
+    "parent_id": "5016",
+    "name": "Зарубежная религиозная литература",
+    "slug": "zarubezhnaya_religiya-6469",
+    "url": "/genre/zarubezhnaya_religiya-6469/"
+  },
+  {
+    "id": "6474",
+    "parent_id": "5016",
+    "name": "Зарубежная эзотерическая литература",
+    "slug": "zarubezhnaya_ezoterika-6474",
+    "url": "/genre/zarubezhnaya_ezoterika-6474/"
+  },
+  {
+    "id": "6484",
+    "parent_id": "5016",
+    "name": "Зарубежная прикладная литература",
+    "slug": "zarubezhnaya_prikladnaya_literatura-6484",
+    "url": "/genre/zarubezhnaya_prikladnaya_literatura-6484/"
+  },
+  {
+    "id": "6492",
+    "parent_id": "5016",
+    "name": "Зарубежная религиозная и эзотерическая литература",
+    "slug": "foreign_religion-6492",
+    "url": "/genre/foreign_religion-6492/"
+  },
+  {
+    "id": "6584",
+    "parent_id": "5016",
+    "name": "Зарубежная литература о культуре и искусстве",
+    "slug": "zarubezhnaya_kultura_iskusstvo-6584",
+    "url": "/genre/zarubezhnaya_kultura_iskusstvo-6584/"
+  },
+  {
+    "id": "201663",
+    "parent_id": "5018",
+    "name": "Магические академии",
+    "slug": "magicheskie-akademii-201663",
+    "url": "/genre/magicheskie-akademii-201663/"
+  },
+  {
+    "id": "5224",
+    "parent_id": "5018",
+    "name": "Книги про вампиров",
+    "slug": "vampiry-5224",
+    "url": "/genre/vampiry-5224/"
+  },
+  {
+    "id": "5225",
+    "parent_id": "5018",
+    "name": "Городское фэнтези",
+    "slug": "gorodskoe-5225",
+    "url": "/genre/gorodskoe-5225/"
+  },
+  {
+    "id": "5226",
+    "parent_id": "5018",
+    "name": "Книги про волшебников",
+    "slug": "volshebniki-5226",
+    "url": "/genre/volshebniki-5226/"
+  },
+  {
+    "id": "5228",
+    "parent_id": "5018",
+    "name": "Юмористическое фэнтези",
+    "slug": "umoristicheskoe-5228",
+    "url": "/genre/umoristicheskoe-5228/"
+  },
+  {
+    "id": "5229",
+    "parent_id": "5018",
+    "name": "Русское фэнтези",
+    "slug": "russkoe-5229",
+    "url": "/genre/russkoe-5229/"
+  },
+  {
+    "id": "5230",
+    "parent_id": "5018",
+    "name": "Фэнтези про драконов",
+    "slug": "drakony-5230",
+    "url": "/genre/drakony-5230/"
+  },
+  {
+    "id": "5231",
+    "parent_id": "5018",
+    "name": "Любовное фэнтези",
+    "slug": "lubov-5231",
+    "url": "/genre/lubov-5231/"
+  },
+  {
+    "id": "5232",
+    "parent_id": "5018",
+    "name": "Боевое фэнтези",
+    "slug": "boevoe-5232",
+    "url": "/genre/boevoe-5232/"
+  },
+  {
+    "id": "6337",
+    "parent_id": "5018",
+    "name": "Детективное фэнтези",
+    "slug": "detective_fentezi-6337",
+    "url": "/genre/detective_fentezi-6337/"
+  },
+  {
+    "id": "6791",
+    "parent_id": "5018",
+    "name": "Героическое фэнтези",
+    "slug": "geroicheskoe_fentezi-6791",
+    "url": "/genre/geroicheskoe_fentezi-6791/"
+  },
+  {
+    "id": "6803",
+    "parent_id": "5018",
+    "name": "Эротическое фэнтези",
+    "slug": "eroticheskoe_fantasy-6803",
+    "url": "/genre/eroticheskoe_fantasy-6803/"
+  },
+  {
+    "id": "5238",
+    "parent_id": "5020",
+    "name": "музыка",
+    "slug": "muzyka-5238",
+    "url": "/genre/muzyka-5238/"
+  },
+  {
+    "id": "5241",
+    "parent_id": "5020",
+    "name": "ноты",
+    "slug": "noty-5241",
+    "url": "/genre/noty-5241/"
+  },
+  {
+    "id": "5243",
+    "parent_id": "5020",
+    "name": "искусствоведение",
+    "slug": "iskusstvovedenie-5243",
+    "url": "/genre/iskusstvovedenie-5243/"
+  },
+  {
+    "id": "5244",
+    "parent_id": "5020",
+    "name": "история искусства",
+    "slug": "istoriya-iskusstv-5244",
+    "url": "/genre/istoriya-iskusstv-5244/"
+  },
+  {
+    "id": "5246",
+    "parent_id": "5020",
+    "name": "музеи и коллекции",
+    "slug": "muzei-kollektsii-5246",
+    "url": "/genre/muzei-kollektsii-5246/"
+  },
+  {
+    "id": "5247",
+    "parent_id": "5020",
+    "name": "танцы",
+    "slug": "tansy-5247",
+    "url": "/genre/tansy-5247/"
+  },
+  {
+    "id": "5248",
+    "parent_id": "5020",
+    "name": "цирк",
+    "slug": "cirk-5248",
+    "url": "/genre/cirk-5248/"
+  },
+  {
+    "id": "5768",
+    "parent_id": "5020",
+    "name": "телевидение",
+    "slug": "televideniye-5768",
+    "url": "/genre/televideniye-5768/"
+  },
+  {
+    "id": "5256",
+    "parent_id": "5021",
+    "name": "практика психологии",
+    "slug": "prakticheskaya-5256",
+    "url": "/genre/prakticheskaya-5256/"
+  },
+  {
+    "id": "5257",
+    "parent_id": "5021",
+    "name": "возрастная психология",
+    "slug": "vozrastnaya-psihologiya-5257",
+    "url": "/genre/vozrastnaya-psihologiya-5257/"
+  },
+  {
+    "id": "5883",
+    "parent_id": "5021",
+    "name": "отраслевая психология",
+    "slug": "otraslevaya-5883",
+    "url": "/genre/otraslevaya-5883/"
+  },
+  {
+    "id": "5204",
+    "parent_id": "5022",
+    "name": "Триллеры",
+    "slug": "trillery-5204",
+    "url": "/genre/trillery-5204/"
+  },
+  {
+    "id": "5259",
+    "parent_id": "5022",
+    "name": "Современные детективы",
+    "slug": "sovremennye-5259",
+    "url": "/genre/sovremennye-5259/"
+  },
+  {
+    "id": "5260",
+    "parent_id": "5022",
+    "name": "Полицейские детективы",
+    "slug": "policeyskie-5260",
+    "url": "/genre/policeyskie-5260/"
+  },
+  {
+    "id": "5261",
+    "parent_id": "5022",
+    "name": "Классические детективы",
+    "slug": "klassicheskie-5261",
+    "url": "/genre/klassicheskie-5261/"
+  },
+  {
+    "id": "5262",
+    "parent_id": "5022",
+    "name": "Иронические детективы",
+    "slug": "ironicheskie-5262",
+    "url": "/genre/ironicheskie-5262/"
+  },
+  {
+    "id": "5263",
+    "parent_id": "5022",
+    "name": "Шпионские детективы",
+    "slug": "shpionskie-5263",
+    "url": "/genre/shpionskie-5263/"
+  },
+  {
+    "id": "5264",
+    "parent_id": "5022",
+    "name": "Политические детективы",
+    "slug": "politicheskie-5264",
+    "url": "/genre/politicheskie-5264/"
+  },
+  {
+    "id": "5265",
+    "parent_id": "5022",
+    "name": "Крутой детектив",
+    "slug": "krutoy-detektiv-5265",
+    "url": "/genre/krutoy-detektiv-5265/"
+  },
+  {
+    "id": "192079",
+    "parent_id": "5024",
+    "name": "Информационная безопасность",
+    "slug": "infobezopasnost-192079",
+    "url": "/genre/infobezopasnost-192079/"
+  },
+  {
+    "id": "5268",
+    "parent_id": "5024",
+    "name": "Компьютерное железо",
+    "slug": "zhelezo-5268",
+    "url": "/genre/zhelezo-5268/"
+  },
+  {
+    "id": "5269",
+    "parent_id": "5024",
+    "name": "ОС и сети",
+    "slug": "os-seti-5269",
+    "url": "/genre/os-seti-5269/"
+  },
+  {
+    "id": "5270",
+    "parent_id": "5024",
+    "name": "Программы",
+    "slug": "programmy-5270",
+    "url": "/genre/programmy-5270/"
+  },
+  {
+    "id": "5271",
+    "parent_id": "5024",
+    "name": "Интернет",
+    "slug": "internet-5271",
+    "url": "/genre/internet-5271/"
+  },
+  {
+    "id": "5272",
+    "parent_id": "5024",
+    "name": "Программирование",
+    "slug": "programmirovanie-5272",
+    "url": "/genre/programmirovanie-5272/"
+  },
+  {
+    "id": "5273",
+    "parent_id": "5024",
+    "name": "Базы данных",
+    "slug": "bazy-dannyh-5273",
+    "url": "/genre/bazy-dannyh-5273/"
+  },
+  {
+    "id": "6476",
+    "parent_id": "5024",
+    "name": "Компьютерная справочная литература",
+    "slug": "kompjyuternye_spravochniki-6476",
+    "url": "/genre/kompjyuternye_spravochniki-6476/"
+  },
+  {
+    "id": "6487",
+    "parent_id": "5024",
+    "name": "Книги о компьютерах",
+    "slug": "knigi_o_kompyuterah-6487",
+    "url": "/genre/knigi_o_kompyuterah-6487/"
+  },
+  {
+    "id": "5292",
+    "parent_id": "5027",
+    "name": "журналы",
+    "slug": "zhurnalnye-izdaniya-5292",
+    "url": "/genre/zhurnalnye-izdaniya-5292/"
+  },
+  {
+    "id": "5293",
+    "parent_id": "5027",
+    "name": "газеты",
+    "slug": "gazety-5293",
+    "url": "/genre/gazety-5293/"
+  },
+  {
+    "id": "5294",
+    "parent_id": "5027",
+    "name": "альманахи",
+    "slug": "almanakhi-5294",
+    "url": "/genre/almanakhi-5294/"
+  },
+  {
+    "id": "5295",
+    "parent_id": "5027",
+    "name": "сборники",
+    "slug": "sborniki-5295",
+    "url": "/genre/sborniki-5295/"
+  },
+  {
+    "id": "5299",
+    "parent_id": "5028",
+    "name": "мифы / легенды / эпос",
+    "slug": "mify-legendy-epos-5299",
+    "url": "/genre/mify-legendy-epos-5299/"
+  },
+  {
+    "id": "5300",
+    "parent_id": "5028",
+    "name": "античная литература",
+    "slug": "antichnaya-5300",
+    "url": "/genre/antichnaya-5300/"
+  },
+  {
+    "id": "5301",
+    "parent_id": "5028",
+    "name": "европейская старинная литература",
+    "slug": "evropeyskaya-starinnaya-5301",
+    "url": "/genre/evropeyskaya-starinnaya-5301/"
+  },
+  {
+    "id": "5302",
+    "parent_id": "5028",
+    "name": "древнерусская литература",
+    "slug": "drevnerusskaya-5302",
+    "url": "/genre/drevnerusskaya-5302/"
+  },
+  {
+    "id": "5303",
+    "parent_id": "5028",
+    "name": "древневосточная литература",
+    "slug": "drevnevostochnaya-5303",
+    "url": "/genre/drevnevostochnaya-5303/"
+  },
+  {
+    "id": "5304",
+    "parent_id": "5028",
+    "name": "литература 20 века",
+    "slug": "20-vek-5304",
+    "url": "/genre/20-vek-5304/"
+  },
+  {
+    "id": "5305",
+    "parent_id": "5028",
+    "name": "литература 19 века",
+    "slug": "19-vek-5305",
+    "url": "/genre/19-vek-5305/"
+  },
+  {
+    "id": "5306",
+    "parent_id": "5028",
+    "name": "литература 18 века",
+    "slug": "18-vek-5306",
+    "url": "/genre/18-vek-5306/"
+  },
+  {
+    "id": "5308",
+    "parent_id": "5029",
+    "name": "Эротическая литература",
+    "slug": "eroticheskaya_literatura-5308",
+    "url": "/genre/eroticheskaya_literatura-5308/"
+  },
+  {
+    "id": "6799",
+    "parent_id": "5029",
+    "name": "Эротические рассказы и истории",
+    "slug": "eroticheskie_rasskazy-6799",
+    "url": "/genre/eroticheskie_rasskazy-6799/"
+  },
+  {
+    "id": "5314",
+    "parent_id": "5030",
+    "name": "учебно-методические пособия",
+    "slug": "uchebno-metodicheskie_posobiya-5314",
+    "url": "/genre/uchebno-metodicheskie_posobiya-5314/"
+  },
+  {
+    "id": "5318",
+    "parent_id": "5030",
+    "name": "монографии",
+    "slug": "monografii-5318",
+    "url": "/genre/monografii-5318/"
+  },
+  {
+    "id": "5319",
+    "parent_id": "5030",
+    "name": "задачники",
+    "slug": "zadachniki-5319",
+    "url": "/genre/zadachniki-5319/"
+  },
+  {
+    "id": "5320",
+    "parent_id": "5030",
+    "name": "научные труды",
+    "slug": "nauchnyye-trudy-5320",
+    "url": "/genre/nauchnyye-trudy-5320/"
+  },
+  {
+    "id": "5321",
+    "parent_id": "5030",
+    "name": "естественные науки",
+    "slug": "estestvennyye-nauki-5321",
+    "url": "/genre/estestvennyye-nauki-5321/"
+  },
+  {
+    "id": "5322",
+    "parent_id": "5030",
+    "name": "технические науки",
+    "slug": "tekhnicheskiye-nauki-5322",
+    "url": "/genre/tekhnicheskiye-nauki-5322/"
+  },
+  {
+    "id": "5323",
+    "parent_id": "5030",
+    "name": "гуманитарные и общественные науки",
+    "slug": "gumanitarnyye-nauki-5323",
+    "url": "/genre/gumanitarnyye-nauki-5323/"
+  },
+  {
+    "id": "5324",
+    "parent_id": "5030",
+    "name": "сельское и лесное хозяйство",
+    "slug": "selskoye-lesnoye-khozyaystvo-5324",
+    "url": "/genre/selskoye-lesnoye-khozyaystvo-5324/"
+  },
+  {
+    "id": "5325",
+    "parent_id": "5030",
+    "name": "медицина / здравоохранение",
+    "slug": "medicina-5325",
+    "url": "/genre/medicina-5325/"
+  },
+  {
+    "id": "279655",
+    "parent_id": "5031",
+    "name": "Физика и математика",
+    "slug": "fizika-i-matematika-279655",
+    "url": "/genre/fizika-i-matematika-279655/"
+  },
+  {
+    "id": "279658",
+    "parent_id": "5031",
+    "name": "Космос и вселенная",
+    "slug": "kosmos-i-vselennaya-279658",
+    "url": "/genre/kosmos-i-vselennaya-279658/"
+  },
+  {
+    "id": "279661",
+    "parent_id": "5031",
+    "name": "Будущее и технологии",
+    "slug": "budushhee-i-tehnologii-279661",
+    "url": "/genre/budushhee-i-tehnologii-279661/"
+  },
+  {
+    "id": "279664",
+    "parent_id": "5031",
+    "name": "Биология и химия",
+    "slug": "biologiya-i-himiya-279664",
+    "url": "/genre/biologiya-i-himiya-279664/"
+  },
+  {
+    "id": "279667",
+    "parent_id": "5031",
+    "name": "Здоровье и медицина",
+    "slug": "zdorovye-i-medicina-279667",
+    "url": "/genre/zdorovye-i-medicina-279667/"
+  },
+  {
+    "id": "279670",
+    "parent_id": "5031",
+    "name": "Эволюция и антропология",
+    "slug": "evoljuciya-i-antropologya-279670",
+    "url": "/genre/evoljuciya-i-antropologya-279670/"
+  },
+  {
+    "id": "279673",
+    "parent_id": "5031",
+    "name": "Философия и логика",
+    "slug": "filosofiya-i-logika-279673",
+    "url": "/genre/filosofiya-i-logika-279673/"
+  },
+  {
+    "id": "279676",
+    "parent_id": "5031",
+    "name": "Политика и власть",
+    "slug": "politika-i-vlast-279676",
+    "url": "/genre/politika-i-vlast-279676/"
+  },
+  {
+    "id": "279724",
+    "parent_id": "5031",
+    "name": "Научпоп: прочее",
+    "slug": "nauchpop-prochee-279724",
+    "url": "/genre/nauchpop-prochee-279724/"
+  },
+  {
+    "id": "5330",
+    "parent_id": "5047",
+    "name": "гендерные различия",
+    "slug": "gendernyye-razlichiya-5330",
+    "url": "/genre/gendernyye-razlichiya-5330/"
+  },
+  {
+    "id": "5331",
+    "parent_id": "5047",
+    "name": "тимбилдинг",
+    "slug": "timbilding-5331",
+    "url": "/genre/timbilding-5331/"
+  },
+  {
+    "id": "5332",
+    "parent_id": "5047",
+    "name": "конфликты",
+    "slug": "konflikty-5332",
+    "url": "/genre/konflikty-5332/"
+  },
+  {
+    "id": "5333",
+    "parent_id": "5047",
+    "name": "мотивация",
+    "slug": "motivaciya-5333",
+    "url": "/genre/motivaciya-5333/"
+  },
+  {
+    "id": "5334",
+    "parent_id": "5047",
+    "name": "аттестация персонала",
+    "slug": "attestaciya-personala-5334",
+    "url": "/genre/attestaciya-personala-5334/"
+  },
+  {
+    "id": "5335",
+    "parent_id": "5047",
+    "name": "поиск и подбор персонала",
+    "slug": "poisk-presonala-hr-5335",
+    "url": "/genre/poisk-presonala-hr-5335/"
+  },
+  {
+    "id": "5336",
+    "parent_id": "5047",
+    "name": "коучинг",
+    "slug": "kouching-5336",
+    "url": "/genre/kouching-5336/"
+  },
+  {
+    "id": "6583",
+    "parent_id": "5047",
+    "name": "управление персоналом",
+    "slug": "upravlenie_personalom-6583",
+    "url": "/genre/upravlenie_personalom-6583/"
+  },
+  {
+    "id": "5347",
+    "parent_id": "5048",
+    "name": "отношения с клиентами",
+    "slug": "otnosheniya-s-kliyentami-5347",
+    "url": "/genre/otnosheniya-s-kliyentami-5347/"
+  },
+  {
+    "id": "5348",
+    "parent_id": "5048",
+    "name": "привлечение клиентов",
+    "slug": "privlecheniye-kliyentov-5348",
+    "url": "/genre/privlecheniye-kliyentov-5348/"
+  },
+  {
+    "id": "5349",
+    "parent_id": "5048",
+    "name": "событийный маркетинг",
+    "slug": "sobytiynyy-marketing-5349",
+    "url": "/genre/sobytiynyy-marketing-5349/"
+  },
+  {
+    "id": "5350",
+    "parent_id": "5048",
+    "name": "управление ассортиментом",
+    "slug": "upravleniye-assortimentom-5350",
+    "url": "/genre/upravleniye-assortimentom-5350/"
+  },
+  {
+    "id": "5351",
+    "parent_id": "5048",
+    "name": "управление маркетингом",
+    "slug": "upravleniye-marketingom-5351",
+    "url": "/genre/upravleniye-marketingom-5351/"
+  },
+  {
+    "id": "5352",
+    "parent_id": "5048",
+    "name": "стратегия маркетинга",
+    "slug": "strategiya-marketinga-5352",
+    "url": "/genre/strategiya-marketinga-5352/"
+  },
+  {
+    "id": "5353",
+    "parent_id": "5048",
+    "name": "клиентский сервис",
+    "slug": "kliyentskiy-servis-5353",
+    "url": "/genre/kliyentskiy-servis-5353/"
+  },
+  {
+    "id": "5354",
+    "parent_id": "5048",
+    "name": "PR",
+    "slug": "pr-5354",
+    "url": "/genre/pr-5354/"
+  },
+  {
+    "id": "5355",
+    "parent_id": "5048",
+    "name": "маркетинг для новичков",
+    "slug": "dlya-novichkov-5355",
+    "url": "/genre/dlya-novichkov-5355/"
+  },
+  {
+    "id": "5356",
+    "parent_id": "5048",
+    "name": "реклама",
+    "slug": "reklama-5356",
+    "url": "/genre/reklama-5356/"
+  },
+  {
+    "id": "5826",
+    "parent_id": "5052",
+    "name": "экономический анализ",
+    "slug": "ekonomicheskiy-analiz-5826",
+    "url": "/genre/ekonomicheskiy-analiz-5826/"
+  },
+  {
+    "id": "5827",
+    "parent_id": "5052",
+    "name": "отраслевая и межотраслевая экономика",
+    "slug": "otraslevaya-ekonomika-5827",
+    "url": "/genre/otraslevaya-ekonomika-5827/"
+  },
+  {
+    "id": "5828",
+    "parent_id": "5052",
+    "name": "мировая экономика",
+    "slug": "mirovaya-ekonomika-5828",
+    "url": "/genre/mirovaya-ekonomika-5828/"
+  },
+  {
+    "id": "5829",
+    "parent_id": "5052",
+    "name": "экономика развитых стран",
+    "slug": "razvityye-strany-5829",
+    "url": "/genre/razvityye-strany-5829/"
+  },
+  {
+    "id": "5830",
+    "parent_id": "5052",
+    "name": "экономика развивающихся стран",
+    "slug": "razvivayushchiye-strany-5830",
+    "url": "/genre/razvivayushchiye-strany-5830/"
+  },
+  {
+    "id": "5831",
+    "parent_id": "5052",
+    "name": "экономическое развитие",
+    "slug": "ekonomicheskoe-razvitie-5831",
+    "url": "/genre/ekonomicheskoe-razvitie-5831/"
+  },
+  {
+    "id": "5832",
+    "parent_id": "5052",
+    "name": "история экономики",
+    "slug": "istoriya-ekonomiki-5832",
+    "url": "/genre/istoriya-ekonomiki-5832/"
+  },
+  {
+    "id": "5833",
+    "parent_id": "5052",
+    "name": "макроэкономика",
+    "slug": "makroekonomika-5833",
+    "url": "/genre/makroekonomika-5833/"
+  },
+  {
+    "id": "5834",
+    "parent_id": "5052",
+    "name": "внешнеэкономическая деятельность",
+    "slug": "ved-5834",
+    "url": "/genre/ved-5834/"
+  },
+  {
+    "id": "5835",
+    "parent_id": "5052",
+    "name": "микроэкономика",
+    "slug": "mikroekonomika-5835",
+    "url": "/genre/mikroekonomika-5835/"
+  },
+  {
+    "id": "5357",
+    "parent_id": "5053",
+    "name": "Forex",
+    "slug": "forex-5357",
+    "url": "/genre/forex-5357/"
+  },
+  {
+    "id": "5358",
+    "parent_id": "5053",
+    "name": "IPO",
+    "slug": "ipo-5358",
+    "url": "/genre/ipo-5358/"
+  },
+  {
+    "id": "5359",
+    "parent_id": "5053",
+    "name": "бюджетирование",
+    "slug": "budzhetirovaniye-5359",
+    "url": "/genre/budzhetirovaniye-5359/"
+  },
+  {
+    "id": "5360",
+    "parent_id": "5053",
+    "name": "корпоративные финансы",
+    "slug": "korporativnyye-finansy-5360",
+    "url": "/genre/korporativnyye-finansy-5360/"
+  },
+  {
+    "id": "5361",
+    "parent_id": "5053",
+    "name": "риски",
+    "slug": "riski-5361",
+    "url": "/genre/riski-5361/"
+  },
+  {
+    "id": "5362",
+    "parent_id": "5053",
+    "name": "технический анализ",
+    "slug": "tekhnicheskiy-analiz-5362",
+    "url": "/genre/tekhnicheskiy-analiz-5362/"
+  },
+  {
+    "id": "5363",
+    "parent_id": "5053",
+    "name": "трейдинг",
+    "slug": "treyding-5363",
+    "url": "/genre/treyding-5363/"
+  },
+  {
+    "id": "5364",
+    "parent_id": "5053",
+    "name": "финансовые инструменты",
+    "slug": "finansovyye-instrumenty-5364",
+    "url": "/genre/finansovyye-instrumenty-5364/"
+  },
+  {
+    "id": "5365",
+    "parent_id": "5053",
+    "name": "МСФО",
+    "slug": "msfo-5365",
+    "url": "/genre/msfo-5365/"
+  },
+  {
+    "id": "5372",
+    "parent_id": "5058",
+    "name": "истории успеха",
+    "slug": "istorii-uspekha-5372",
+    "url": "/genre/istorii-uspekha-5372/"
+  },
+  {
+    "id": "5373",
+    "parent_id": "5058",
+    "name": "консалтинг",
+    "slug": "konsalting-5373",
+    "url": "/genre/konsalting-5373/"
+  },
+  {
+    "id": "5374",
+    "parent_id": "5058",
+    "name": "креатив / идеи",
+    "slug": "kreativ-idei-5374",
+    "url": "/genre/kreativ-idei-5374/"
+  },
+  {
+    "id": "5376",
+    "parent_id": "5058",
+    "name": "организация офиса",
+    "slug": "organizatsiya-ofisa-5376",
+    "url": "/genre/organizatsiya-ofisa-5376/"
+  },
+  {
+    "id": "5377",
+    "parent_id": "5058",
+    "name": "работа с долгами",
+    "slug": "rabota-s-dolgami-5377",
+    "url": "/genre/rabota-s-dolgami-5377/"
+  },
+  {
+    "id": "5378",
+    "parent_id": "5058",
+    "name": "российская практика",
+    "slug": "rossiyskaya-praktika-5378",
+    "url": "/genre/rossiyskaya-praktika-5378/"
+  },
+  {
+    "id": "5379",
+    "parent_id": "5058",
+    "name": "советы от гуру",
+    "slug": "guru-5379",
+    "url": "/genre/guru-5379/"
+  },
+  {
+    "id": "5380",
+    "parent_id": "5058",
+    "name": "слияния и поглощения",
+    "slug": "sliyaniya-pogloshcheniya-5380",
+    "url": "/genre/sliyaniya-pogloshcheniya-5380/"
+  },
+  {
+    "id": "5381",
+    "parent_id": "5058",
+    "name": "бизнес-стратегии",
+    "slug": "strategiya-5381",
+    "url": "/genre/strategiya-5381/"
+  },
+  {
+    "id": "5383",
+    "parent_id": "5058",
+    "name": "эффективность бизнеса",
+    "slug": "effectivnost-5383",
+    "url": "/genre/effectivnost-5383/"
+  },
+  {
+    "id": "5384",
+    "parent_id": "5063",
+    "name": "дистрибуция",
+    "slug": "distributsiya-5384",
+    "url": "/genre/distributsiya-5384/"
+  },
+  {
+    "id": "5385",
+    "parent_id": "5063",
+    "name": "техника продаж",
+    "slug": "tekhnika-prodazh-5385",
+    "url": "/genre/tekhnika-prodazh-5385/"
+  },
+  {
+    "id": "5386",
+    "parent_id": "5063",
+    "name": "управление продажами",
+    "slug": "upravleniye-prodazhami-5386",
+    "url": "/genre/upravleniye-prodazhami-5386/"
+  },
+  {
+    "id": "5387",
+    "parent_id": "5063",
+    "name": "успешные переговоры",
+    "slug": "peregovory-5387",
+    "url": "/genre/peregovory-5387/"
+  },
+  {
+    "id": "5388",
+    "parent_id": "5063",
+    "name": "холодные продажи",
+    "slug": "kholodnyye-5388",
+    "url": "/genre/kholodnyye-5388/"
+  },
+  {
+    "id": "5389",
+    "parent_id": "5063",
+    "name": "эффективная презентация",
+    "slug": "prezentatsiya-5389",
+    "url": "/genre/prezentatsiya-5389/"
+  },
+  {
+    "id": "5382",
+    "parent_id": "5070",
+    "name": "управление бизнесом",
+    "slug": "upravlenie-5382",
+    "url": "/genre/upravlenie-5382/"
+  },
+  {
+    "id": "5391",
+    "parent_id": "5070",
+    "name": "бизнес-процессы",
+    "slug": "biznes-protsessy-5391",
+    "url": "/genre/biznes-protsessy-5391/"
+  },
+  {
+    "id": "5392",
+    "parent_id": "5070",
+    "name": "классика менеджмента",
+    "slug": "klassika-5392",
+    "url": "/genre/klassika-5392/"
+  },
+  {
+    "id": "5393",
+    "parent_id": "5070",
+    "name": "стратегический менеджмент",
+    "slug": "strategicheskiy_menedzhment-5393",
+    "url": "/genre/strategicheskiy_menedzhment-5393/"
+  },
+  {
+    "id": "5394",
+    "parent_id": "5070",
+    "name": "кризисное управление",
+    "slug": "krizisnoye-upravleniye-5394",
+    "url": "/genre/krizisnoye-upravleniye-5394/"
+  },
+  {
+    "id": "5395",
+    "parent_id": "5070",
+    "name": "управление качеством",
+    "slug": "upravleniye-kachestvom-5395",
+    "url": "/genre/upravleniye-kachestvom-5395/"
+  },
+  {
+    "id": "5396",
+    "parent_id": "5070",
+    "name": "лидерство",
+    "slug": "liderstvo-5396",
+    "url": "/genre/liderstvo-5396/"
+  },
+  {
+    "id": "5397",
+    "parent_id": "5070",
+    "name": "японский менеджмент",
+    "slug": "yaponskiy-5397",
+    "url": "/genre/yaponskiy-5397/"
+  },
+  {
+    "id": "5398",
+    "parent_id": "5070",
+    "name": "project-менеджмент",
+    "slug": "proect-5398",
+    "url": "/genre/proect-5398/"
+  },
+  {
+    "id": "5399",
+    "parent_id": "5070",
+    "name": "финансовый менеджмент",
+    "slug": "finansovyy-5399",
+    "url": "/genre/finansovyy-5399/"
+  },
+  {
+    "id": "201910",
+    "parent_id": "5253",
+    "name": "Любовь и отношения",
+    "slug": "lubov_i_otnosheniya-201910",
+    "url": "/genre/lubov_i_otnosheniya-201910/"
+  },
+  {
+    "id": "5249",
+    "parent_id": "5253",
+    "name": "Общая психология",
+    "slug": "obschaya-psihologiya-5249",
+    "url": "/genre/obschaya-psihologiya-5249/"
+  },
+  {
+    "id": "5250",
+    "parent_id": "5253",
+    "name": "Социальная психология",
+    "slug": "socialnaya-5250",
+    "url": "/genre/socialnaya-5250/"
+  },
+  {
+    "id": "5251",
+    "parent_id": "5253",
+    "name": "Классики психологии",
+    "slug": "klassiki-5251",
+    "url": "/genre/klassiki-5251/"
+  },
+  {
+    "id": "5624",
+    "parent_id": "5253",
+    "name": "Семейная психология",
+    "slug": "semeynaya-psihologiya-5624",
+    "url": "/genre/semeynaya-psihologiya-5624/"
+  },
+  {
+    "id": "5630",
+    "parent_id": "5253",
+    "name": "О психологии популярно",
+    "slug": "populyarno-5630",
+    "url": "/genre/populyarno-5630/"
+  },
+  {
+    "id": "5640",
+    "parent_id": "5253",
+    "name": "Практическая психология",
+    "slug": "praktika-5640",
+    "url": "/genre/praktika-5640/"
+  },
+  {
+    "id": "5641",
+    "parent_id": "5253",
+    "name": "Психологические тренинги",
+    "slug": "treningi-5641",
+    "url": "/genre/treningi-5641/"
+  },
+  {
+    "id": "5885",
+    "parent_id": "5253",
+    "name": "Состояния и явления психики",
+    "slug": "sostoyanie-psihiki-5885",
+    "url": "/genre/sostoyanie-psihiki-5885/"
+  },
+  {
+    "id": "6838",
+    "parent_id": "5253",
+    "name": "Психотерапия",
+    "slug": "psihoterapiya-6838",
+    "url": "/genre/psihoterapiya-6838/"
+  },
+  {
+    "id": "6361",
+    "parent_id": "6356",
+    "name": "английский язык",
+    "slug": "anglijskij_yazyk-6361",
+    "url": "/genre/anglijskij_yazyk-6361/"
+  },
+  {
+    "id": "6365",
+    "parent_id": "6356",
+    "name": "немецкий язык",
+    "slug": "nemetckij_yazyk-6365",
+    "url": "/genre/nemetckij_yazyk-6365/"
+  },
+  {
+    "id": "6370",
+    "parent_id": "6356",
+    "name": "французский язык",
+    "slug": "frantcuzskij_yazyk-6370",
+    "url": "/genre/frantcuzskij_yazyk-6370/"
+  },
+  {
+    "id": "6375",
+    "parent_id": "6356",
+    "name": "итальянский язык",
+    "slug": "italjyanskij_yazyk-6375",
+    "url": "/genre/italjyanskij_yazyk-6375/"
+  },
+  {
+    "id": "6380",
+    "parent_id": "6356",
+    "name": "испанский язык",
+    "slug": "ispanskij_yazyk-6380",
+    "url": "/genre/ispanskij_yazyk-6380/"
+  },
+  {
+    "id": "6385",
+    "parent_id": "6356",
+    "name": "иностранные языки",
+    "slug": "inostrannye_yazyki_prochee-6385",
+    "url": "/genre/inostrannye_yazyki_prochee-6385/"
+  },
+  {
+    "id": "6389",
+    "parent_id": "6356",
+    "name": "русский язык как иностранный",
+    "slug": "russkij_kak_inostrannyj-6389",
+    "url": "/genre/russkij_kak_inostrannyj-6389/"
+  },
+  {
+    "id": "6575",
+    "parent_id": "6356",
+    "name": "польский язык",
+    "slug": "polskij_yazyk-6575",
+    "url": "/genre/polskij_yazyk-6575/"
+  }
+]

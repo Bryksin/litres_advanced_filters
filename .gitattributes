@@ -1,0 +1,14 @@
+# Normalize line endings to LF on commit for all text files
+* text=auto eol=lf
+
+# Explicitly enforce LF for executable scripts
+*.sh text eol=lf
+
+# Binary files — no line-ending conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.db  binary
+*.pdf binary

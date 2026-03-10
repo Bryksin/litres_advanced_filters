@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Каталог — Расширенные фильтры Литрес{% endblock %}
+{% block page_title %}Каталог{% endblock %}
+{% block results_meta %}<span class="results-meta">{{ total_count if total_count is defined else items|length }} книг</span>{% endblock %}
+
+{% block content %}
+<section class="results" aria-label="Результаты поиска">
+  <h2 class="visually-hidden">Список книг и серий</h2>
+  <div class="book-grid">
+    {% for item in items %}
+    <article class="book-card{{ ' book-card--series' if item.type == 'series' }}"
+             {% if item.type == 'series' %}aria-label="Серия: {{ item.title }}, {{ item.book_count }} книг"{% endif %}>
+      <div class="book-card__cover-wrap">
+        <a href="{{ item.url }}" class="book-card__cover-link" target="_blank" rel="noopener">
+          <img
+            class="book-card__cover"
+            src="{{ item.cover_url or url_for('static', filename='img/cover-placeholder.svg') }}"
+            alt="{{ item.title }}"
+            loading="lazy"
+            onerror="this.onerror=null;this.src='{{ url_for('static', filename='img/cover-placeholder.svg') }}';"
+          >
+        </a>
+        {% if item.type == 'series' %}
+        <div class="book-card__series-banner">
+          <span class="book-card__series-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 14" width="18" height="13" fill="currentColor"><rect x="0" y="2" width="5" height="10" rx="1"/><rect x="9" y="0" width="5" height="12" rx="1"/><rect x="18" y="1" width="5" height="11" rx="1"/></svg>
+          </span>
+          Серия · {{ item.book_count }} книг
+        </div>
+        {% endif %}
+      </div>
+      <div class="book-card__body">
+        <a href="{{ item.url }}" class="book-card__title" target="_blank" rel="noopener">
+          {{ item.title }}
+        </a>
+        <p class="book-card__author">{{ item.authors | join(", ") }}</p>
+        {% if item.type == 'book' and item.narrator %}
+        <p class="book-card__narrator">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align: -2px; margin-right: 2px;"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>
+          {{ item.narrator }}
+        </p>
+        {% endif %}
+        <div class="book-card__footer">
+          <div class="book-card__rating">
+            <span class="book-card__stars" aria-hidden="true">&#9733;</span>
+            <span class="book-card__rating-value">{{ "%.1f"|format(item.rating_avg) if item.rating_avg else "—" }}</span>
+            <span class="book-card__rating-count">({{ item.rating_count }})</span>
+          </div>
+          {% if item.type == 'book' %}
+          <button type="button" class="btn-icon btn-icon--danger btn-ignore"
+                  data-art-id="{{ item.book_id }}"
+                  aria-label="Добавить в игнор-лист: {{ item.title }}">
+            &#10005;
+          </button>
+          {% else %}
+          <button type="button" class="btn-icon btn-icon--danger btn-ignore"
+                  data-series-id="{{ item.series_id }}"
+                  aria-label="Добавить в игнор-лист: {{ item.title }}">
+            &#10005;
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </article>
+    {% else %}
+    {# 8.24 Context-aware empty states #}
+    <div class="empty-state">
+      {% if not selected_genre_id or selected_genre_id == '' %}
+      <div class="empty-state__icon" aria-hidden="true">&#128218;</div>
+      <p class="empty-state__text">Выберите жанр в боковой панели для начала поиска.</p>
+      {% elif total_count is defined and total_count == 0 %}
+      <div class="empty-state__icon" aria-hidden="true">&#128269;</div>
+      <p class="empty-state__text">Ничего не найдено. Попробуйте ослабить фильтры.</p>
+      <a href="{{ url_for('catalog.index') }}" class="empty-state__action">Сбросить фильтры</a>
+      {% else %}
+      <div class="empty-state__icon" aria-hidden="true">&#128218;</div>
+      <p class="empty-state__text">Выберите жанр в боковой панели. Фильтры применяются автоматически.</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% if items %}
+{% set total_pages = ((total_count - 1) // 48 + 1) if total_count > 0 else 1 %}
+{% set args = request.args.to_dict() %}
+<nav class="pagination" aria-label="Пагинация">
+  {% if current_page > 1 %}
+  <a class="pagination__btn" href="{{ url_for('catalog.index', **dict(args, page=current_page - 1)) }}" aria-label="Предыдущая страница">&larr;</a>
+  {% else %}
+  <span class="pagination__btn" aria-disabled="true">&larr;</span>
+  {% endif %}
+
+  {% set pages = [] %}
+  {% for p in range(1, total_pages + 1) %}
+    {% if p == 1 or p == total_pages or (p >= current_page - 2 and p <= current_page + 2) %}
+      {% set _ = pages.append(p) %}
+    {% endif %}
+  {% endfor %}
+
+  {% set prev_p = [0] %}
+  {% for p in pages %}
+    {% if p - prev_p[0] > 1 %}
+    <span class="pagination__ellipsis">&hellip;</span>
+    {% endif %}
+    {% if p == current_page %}
+    <span class="pagination__page pagination__page--current" aria-current="page">{{ p }}</span>
+    {% else %}
+    <a class="pagination__page" href="{{ url_for('catalog.index', **dict(args, page=p)) }}">{{ p }}</a>
+    {% endif %}
+    {% set _ = prev_p.__setitem__(0, p) %}
+  {% endfor %}
+
+  {% if has_next %}
+  <a class="pagination__btn" href="{{ url_for('catalog.index', **dict(args, page=current_page + 1)) }}" aria-label="Следующая страница">&rarr;</a>
+  {% else %}
+  <span class="pagination__btn" aria-disabled="true">&rarr;</span>
+  {% endif %}
+
+  {% if total_pages > 1 %}
+  <span class="pagination__info">Страница {{ current_page }} из {{ total_pages }}</span>
+  {% endif %}
+</nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Run Alembic migrations (default: upgrade to head).
+# Usage:
+#   ./bin/migrate.sh              — upgrade to latest
+#   ./bin/migrate.sh downgrade -1 — roll back one revision
+#   ./bin/migrate.sh current      — show current revision
+#   ./bin/migrate.sh history      — show revision history
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT"
+
+if [[ $# -eq 0 ]]; then
+  poetry run alembic upgrade head
+else
+  poetry run alembic "$@"
+fi

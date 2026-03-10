@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Расширенные фильтры Литрес{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  {# 8.17 Skip navigation links #}
+  <a href="#main-content" class="skip-link">Перейти к содержимому</a>
+
+  {# 8.27 Mobile top bar #}
+  <header class="mobile-bar">
+    <button class="mobile-bar__menu" aria-label="Открыть фильтры" aria-expanded="false" aria-controls="sidebar">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="mobile-bar__title">Каталог</span>
+    <div class="sort-control sort-control--mobile">
+      <select id="toolbar-sort-mobile" class="sort-select" aria-label="Сортировка">
+        <option value="release_date_desc"{{ ' selected' if not settings or settings.sort == 'release_date_desc' }}>По новизне</option>
+        <option value="rating_avg_desc"{{ ' selected' if settings and settings.sort == 'rating_avg_desc' }}>По рейтингу</option>
+        <option value="rating_count_desc"{{ ' selected' if settings and settings.sort == 'rating_count_desc' }}>По количеству голосов</option>
+      </select>
+    </div>
+  </header>
+
+  {# 8.26 Drawer scrim #}
+  <div class="drawer-scrim" id="drawer-scrim"></div>
+
+  <div class="app-layout">
+    {# 8.18 ARIA landmarks #}
+    <aside class="sidebar" id="sidebar" role="complementary" aria-label="Фильтры каталога">
+      {# Mobile drawer close button #}
+      <div class="sidebar__drawer-header">
+        <span>Фильтры</span>
+        <button class="sidebar__drawer-close" aria-label="Закрыть фильтры">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="sidebar__brand">
+        <a href="{{ url_for('catalog.index') }}">Литрес Фильтры</a>
+        <span class="sidebar__brand-sub">Расширенный каталог</span>
+      </div>
+
+      <form id="filter-form" method="get" action="{{ url_for('catalog.index') }}">
+      <input type="hidden" id="genre-id-input" name="genre_id" value="{{ selected_genre_id or '' }}">
+      <input type="hidden" name="_submit" value="1">
+      <input type="hidden" id="excluded-narrators-json" name="excluded_narrators_json" value="{{ settings.excluded_narrators | tojson if settings and settings.excluded_narrators else '[]' }}">
+      <input type="hidden" id="excluded-authors-json" name="excluded_authors_json" value="{{ settings.excluded_authors | tojson if settings and settings.excluded_authors else '[]' }}">
+      <input type="hidden" id="f-sort-hidden" name="sort" value="{{ settings.sort if settings and settings.sort else 'release_date_desc' }}">
+
+      {# ── Zone 2: Genre tree (own scroll container) ── #}
+      <span class="sidebar__section">Жанры</span>
+      <nav class="genre-tree" role="region" aria-label="Дерево жанров">
+        {# 8.17 Sidebar skip link #}
+        <a href="#filter-section" class="skip-link skip-link--sidebar">Перейти к фильтрам</a>
+        {% macro render_genres(items, depth=0) %}
+        <ul class="genre-tree__list" data-depth="{{ depth }}">
+          {% for g in items %}
+          <li class="genre-tree__item">
+            {% if g.children %}
+            <details class="genre-tree__details"{{ ' open' if g.id in open_genre_ids }}>
+              <summary class="genre-tree__summary{{ ' is-active' if g.id == selected_genre_id }}"
+                       data-genre-id="{{ g.id }}"{{ ' aria-current=true' if g.id == selected_genre_id }}>{{ g.name }}</summary>
+              {{ render_genres(g.children, depth + 1) }}
+            </details>
+            {% else %}
+            {# 8.19 Genre items: use <button> semantics #}
+            <button type="button"
+               class="genre-tree__link{{ ' is-active' if g.id == selected_genre_id }}"
+               data-genre-id="{{ g.id }}"{{ ' aria-current=true' if g.id == selected_genre_id }}>{{ g.name }}</button>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endmacro %}
+
+        {% block genre_tree %}
+        {{ render_genres(genres) }}
+        {% endblock %}
+      </nav>
+
+      {# ── Zone 3: Filters (scrollable, fills remaining space) ── #}
+      <div class="sidebar__filters" id="filter-section" role="region" aria-label="Дополнительные фильтры" tabindex="-1">
+
+        {# ─── Серии / Одиночные ─── #}
+        <span class="sidebar__section">Серии / Одиночные</span>
+        <div class="sidebar__filter-body">
+          <div class="f-control">
+            {# 8.22 Filter toggle ARIA #}
+            <input type="checkbox" id="f-only-series" name="only_series"
+                   aria-controls="series-body" aria-expanded="{{ 'true' if settings and settings.series_only else 'false' }}"
+                   {{ ' checked' if settings and settings.series_only }}>
+            <label for="f-only-series" title="Показывать только книги, входящие в серию — не одиночные издания">Только серии</label>
+          </div>
+          <div class="f-toggle-body f-toggle-body--child" id="series-body" role="region" aria-labelledby="f-only-series">
+            <div class="f-control">
+              <input type="checkbox" id="f-full-series-sub" name="full_series_subscription"{{ ' checked' if settings and settings.full_series_subscription }}>
+              <label for="f-full-series-sub" title="Все книги серии доступны по подписке, а не только первые">Вся серия по подписке</label>
+            </div>
+            <div class="f-inline-pair f-inline-pair--compact">
+              <div class="f-control">
+                <label for="f-series-min" title="Минимальное количество книг в серии">Размер от</label>
+                <input type="number" id="f-series-min" name="series_min" min="2" value="{{ settings.series_min if settings and settings.series_min else 2 }}">
+              </div>
+              <div class="f-control">
+                <label for="f-series-max" title="Максимальное количество книг в серии">до</label>
+                <input type="number" id="f-series-max" name="series_max" min="2" placeholder="—"{{ ' value=%d'|format(settings.series_max) if settings and settings.series_max }}>
+              </div>
+            </div>
+          </div>
+
+          <div class="f-control">
+            <input type="checkbox" id="f-only-standalones" name="standalones_only"{{ ' checked' if settings and settings.standalones_only }}>
+            <label for="f-only-standalones" title="Показывать только одиночные книги, не входящие в серию">Только одиночные</label>
+          </div>
+        </div>
+
+        {# ─── Исключения ─── #}
+        <span class="sidebar__section">Исключения</span>
+        <div class="sidebar__filter-body">
+          <div class="f-control">
+            <input type="checkbox" id="f-exclude-narrators" name="exclude_narrators"
+                   aria-controls="narrators-body" aria-expanded="{{ 'true' if settings and settings.exclude_narrators else 'false' }}"
+                   {{ ' checked' if settings and settings.exclude_narrators }}>
+            <label for="f-exclude-narrators" title="Не показывать аудиокниги, озвученные указанными чтецами">Исключить чтецов</label>
+          </div>
+          <div class="f-toggle-body f-toggle-body--child" id="narrators-body" role="region">
+            <ul class="narrator-chips" id="narrators-list" role="list" aria-label="Исключённые чтецы">
+              {% if settings and settings.excluded_narrators %}
+              {% for name in settings.excluded_narrators %}
+              <li class="narrator-chip" role="listitem">
+                {{ name }}
+                <button type="button" class="narrator-chip__remove" aria-label="Убрать: {{ name }}">&times;</button>
+              </li>
+              {% endfor %}
+              {% endif %}
+            </ul>
+            <div class="narrator-add" id="narrator-add">
+              <button type="button" class="btn-sidebar-sm" id="narrator-add-btn">+ Добавить чтеца</button>
+              <div class="narrator-add__input" id="narrator-add-input" style="display:none;">
+                <input type="text" id="narrator-name" placeholder="Имя чтеца" class="f-text-input" aria-label="Имя чтеца">
+                <button type="button" class="btn-sidebar-sm" id="narrator-confirm">OK</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="f-control">
+            <input type="checkbox" id="f-exclude-authors" name="exclude_authors"
+                   aria-controls="authors-body" aria-expanded="{{ 'true' if settings and settings.exclude_authors else 'false' }}"
+                   {{ ' checked' if settings and settings.exclude_authors }}>
+            <label for="f-exclude-authors" title="Не показывать книги указанных авторов">Исключить авторов</label>
+          </div>
+          <div class="f-toggle-body f-toggle-body--child" id="authors-body" role="region">
+            <ul class="narrator-chips" id="authors-list" role="list" aria-label="Исключённые авторы">
+              {% if settings and settings.excluded_authors %}
+              {% for name in settings.excluded_authors %}
+              <li class="narrator-chip" role="listitem">
+                {{ name }}
+                <button type="button" class="narrator-chip__remove" aria-label="Убрать: {{ name }}">&times;</button>
+              </li>
+              {% endfor %}
+              {% endif %}
+            </ul>
+            <div class="narrator-add" id="author-add">
+              <button type="button" class="btn-sidebar-sm" id="author-add-btn">+ Добавить автора</button>
+              <div class="narrator-add__input" id="author-add-input" style="display:none;">
+                <input type="text" id="author-name" placeholder="Имя автора" class="f-text-input" aria-label="Имя автора">
+                <button type="button" class="btn-sidebar-sm" id="author-confirm">OK</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ─── Рейтинг ─── #}
+        <span class="sidebar__section">Рейтинг</span>
+        <div class="sidebar__filter-body">
+          <div class="f-inline-pair f-inline-pair--compact">
+            <div class="f-control">
+              <label for="f-rating-min" title="Минимальный средний рейтинг книги (от 0 до 5)">От</label>
+              <input type="number" id="f-rating-min" name="rating_min" min="0" max="5" step="0.5" placeholder="0"{{ ' value=%.1f'|format(settings.rating_min) if settings and settings.rating_min is not none }}>
+            </div>
+            <div class="f-control">
+              <label for="f-rating-max" title="Максимальный средний рейтинг книги (от 0 до 5)">До</label>
+              <input type="number" id="f-rating-max" name="rating_max" min="0" max="5" step="0.5" placeholder="5"{{ ' value=%.1f'|format(settings.rating_max) if settings and settings.rating_max is not none }}>
+            </div>
+          </div>
+        </div>
+
+        {# ─── Игнор-лист ─── #}
+        {% if ignored_count is defined and ignored_count > 0 %}
+        <span class="sidebar__section">Игнор-лист</span>
+        <div class="sidebar__filter-body">
+          <p class="sidebar__filter-note">В игноре: {{ ignored_count }} {{ 'книга' if ignored_count == 1 else ('книги' if ignored_count < 5 else 'книг') }}</p>
+          <button type="button" class="btn-sidebar-sm" id="clear-ignored-btn">Очистить список</button>
+        </div>
+        {% endif %}
+
+        {# ─── Прослушанные ─── #}
+        <span class="sidebar__section">Прослушанные</span>
+        <div class="sidebar__filter-body" id="auth-zone">
+
+          {% if is_authenticated %}
+          <div class="auth-user" id="auth-user-badge">
+            <span class="auth-user__email" title="{{ auth_email }}">{{ auth_email }}</span>
+            <button type="button" class="auth-user__logout" id="auth-logout-btn" title="Выйти">&#10005;</button>
+          </div>
+          {% else %}
+          <button type="button" class="btn-auth-login" id="auth-open-btn" onclick="openAuthModal()">
+            Войти в ЛитРес
+          </button>
+          {% endif %}
+
+          <div class="f-control {{ 'f-control--disabled' if not is_authenticated }}" {{ 'data-auth-required' if not is_authenticated }}>
+            <input type="checkbox" id="f-hide-listened" name="hide_listened"
+                   {{ 'checked' if settings and settings.hide_listened }}
+                   {{ 'disabled' if not is_authenticated }}
+                   onchange="autoSubmit()">
+            <label for="f-hide-listened">Скрыть прослушанные</label>
+            {% if is_authenticated %}
+            <span class="f-badge-count">{{ listened_count }}</span>
+            {% endif %}
+          </div>
+
+          <div class="f-control {{ 'f-control--disabled' if not is_authenticated }}" {{ 'data-auth-required' if not is_authenticated }}>
+            <input type="checkbox" id="f-incomplete-series" name="incomplete_series_only"
+                   {{ 'checked' if settings and settings.incomplete_series_only }}
+                   {{ 'disabled' if not is_authenticated }}
+                   onchange="autoSubmit()">
+            <label for="f-incomplete-series">Незавершённые серии</label>
+          </div>
+
+        </div>
+
+        {# ─── Reset link ─── #}
+        <div class="sidebar__filter-body" style="padding-top: 0.5rem; padding-bottom: 1rem;">
+          <a href="{{ url_for('catalog.index', _reset=1) }}" class="btn-reset">Сбросить фильтры</a>
+        </div>
+
+      </div>{# /.sidebar__filters #}
+
+      </form>
+    </aside>
+
+    <main id="main-content" class="main" tabindex="-1">
+      {# ── Toolbar: title + sort + active filter chips ── #}
+      <div class="results-toolbar">
+        <div class="results-toolbar__row">
+          <h1 class="page-title">
+            {% block page_title %}Каталог{% endblock %}
+            {% block results_meta %}{% endblock %}
+          </h1>
+          <div class="sort-control sort-control--desktop">
+            <label for="toolbar-sort" class="sort-control__label">Сортировка:</label>
+            <select id="toolbar-sort" class="sort-select">
+              <option value="release_date_desc"{{ ' selected' if not settings or settings.sort == 'release_date_desc' }}>По новизне</option>
+              <option value="rating_avg_desc"{{ ' selected' if settings and settings.sort == 'rating_avg_desc' }}>По рейтингу</option>
+              <option value="rating_count_desc"{{ ' selected' if settings and settings.sort == 'rating_count_desc' }}>По количеству голосов</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {# Auth modal #}
+  <div class="auth-modal-scrim" id="auth-modal-scrim" role="presentation"></div>
+  <dialog class="auth-modal" id="auth-modal" aria-labelledby="auth-modal-title">
+    <div class="auth-modal__header">
+      <h2 class="auth-modal__title" id="auth-modal-title">Вход в ЛитРес</h2>
+      <button type="button" class="auth-modal__close" id="auth-modal-close" aria-label="Закрыть">&times;</button>
+    </div>
+    <div class="auth-modal__body">
+      <input type="email" class="auth-modal__input" id="auth-email"
+             placeholder="Email" autocomplete="email">
+      <input type="password" class="auth-modal__input" id="auth-password"
+             placeholder="Пароль" autocomplete="current-password">
+      <p class="auth-modal__error" id="auth-error"></p>
+      <button type="button" class="auth-modal__submit" id="auth-submit-btn" onclick="handleLogin()">
+        <span class="auth-spinner"></span>
+        <span class="auth-form__btn-text">Войти</span>
+      </button>
+    </div>
+  </dialog>
+
+  {# Loading overlay #}
+  <div id="loading-overlay" class="loading-overlay" role="status" aria-label="Загрузка…" aria-hidden="true">
+    <div class="loading-overlay__spinner" aria-hidden="true"></div>
+    <span class="visually-hidden">Загрузка результатов...</span>
+  </div>
+
+  {# 8.23 Screen reader live region #}
+  <div aria-live="polite" class="visually-hidden" id="sr-announce"></div>
+
+  <script>
+  // Screen reader announcement helper
+  function announceToSR(text) {
+    var el = document.getElementById('sr-announce');
+    if (!el) return;
+    el.textContent = '';
+    requestAnimationFrame(function() { el.textContent = text; });
+  }
+
+  // ── Auto-submit helpers ──
+  var _submitTimer = null;
+  var _submitting = false;
+
+  function syncChipsToHidden() {
+    // Serialize narrator chips → hidden JSON field
+    var narratorNames = [];
+    document.querySelectorAll('#narrators-list .narrator-chip').forEach(function(chip) {
+      var removeBtn = chip.querySelector('.narrator-chip__remove');
+      var text = chip.textContent.replace(/\s*×\s*$/, '').trim();
+      if (text) narratorNames.push(text);
+    });
+    document.getElementById('excluded-narrators-json').value = JSON.stringify(narratorNames);
+
+    // Serialize author chips → hidden JSON field
+    var authorNames = [];
+    document.querySelectorAll('#authors-list .narrator-chip').forEach(function(chip) {
+      var text = chip.textContent.replace(/\s*×\s*$/, '').trim();
+      if (text) authorNames.push(text);
+    });
+    document.getElementById('excluded-authors-json').value = JSON.stringify(authorNames);
+  }
+
+  function buildCleanUrl() {
+    // Build URL explicitly — only include params with meaningful values.
+    // This replaces native form GET serialization which includes all fields.
+    syncChipsToHidden();
+
+    // Sync sort from toolbar
+    var toolbarSort = document.getElementById('toolbar-sort');
+    var mobileSort = document.getElementById('toolbar-sort-mobile');
+    var hiddenSort = document.getElementById('f-sort-hidden');
+    if (toolbarSort && hiddenSort) hiddenSort.value = toolbarSort.value;
+    if (mobileSort && hiddenSort && window.innerWidth < 1024) hiddenSort.value = mobileSort.value;
+
+    var params = new URLSearchParams();
+
+    // Genre
+    var genreId = document.getElementById('genre-id-input').value;
+    if (genreId) params.set('genre_id', genreId);
+
+    // Submit marker (server needs this to distinguish form submit from direct nav)
+    params.set('_submit', '1');
+
+    // Sort (omit if default)
+    var sort = hiddenSort ? hiddenSort.value : 'release_date_desc';
+    if (sort && sort !== 'release_date_desc') params.set('sort', sort);
+
+    // Series / Standalones
+    var seriesCb = document.getElementById('f-only-series');
+    var standalonesCb = document.getElementById('f-only-standalones');
+    if (seriesCb && seriesCb.checked) {
+      params.set('only_series', 'on');
+      // Sub-filters only when series is active
+      var seriesMin = document.getElementById('f-series-min');
+      if (seriesMin && seriesMin.value !== '') params.set('series_min', seriesMin.value);
+      var seriesMax = document.getElementById('f-series-max');
+      if (seriesMax && seriesMax.value !== '') params.set('series_max', seriesMax.value);
+      var fullSub = document.getElementById('f-full-series-sub');
+      if (fullSub && fullSub.checked) params.set('full_series_subscription', 'on');
+    }
+    if (standalonesCb && standalonesCb.checked) {
+      params.set('standalones_only', 'on');
+    }
+
+    // Narrator exclusion
+    var excludeNarrCb = document.getElementById('f-exclude-narrators');
+    if (excludeNarrCb && excludeNarrCb.checked) {
+      params.set('exclude_narrators', 'on');
+      var narrJson = document.getElementById('excluded-narrators-json').value;
+      if (narrJson && narrJson !== '[]') params.set('excluded_narrators_json', narrJson);
+    }
+
+    // Author exclusion
+    var excludeAuthCb = document.getElementById('f-exclude-authors');
+    if (excludeAuthCb && excludeAuthCb.checked) {
+      params.set('exclude_authors', 'on');
+      var authJson = document.getElementById('excluded-authors-json').value;
+      if (authJson && authJson !== '[]') params.set('excluded_authors_json', authJson);
+    }
+
+    // Rating
+    var ratingMin = document.getElementById('f-rating-min');
+    if (ratingMin && ratingMin.value !== '') params.set('rating_min', ratingMin.value);
+    var ratingMax = document.getElementById('f-rating-max');
+    if (ratingMax && ratingMax.value !== '') params.set('rating_max', ratingMax.value);
+
+    // F-5: Hide listened
+    var hideListenedCb = document.getElementById('f-hide-listened');
+    if (hideListenedCb && hideListenedCb.checked && !hideListenedCb.disabled) {
+      params.set('hide_listened', 'on');
+    }
+    // F-11: Incomplete series only
+    var incompleteSeriesCb = document.getElementById('f-incomplete-series');
+    if (incompleteSeriesCb && incompleteSeriesCb.checked && !incompleteSeriesCb.disabled) {
+      params.set('incomplete_series_only', 'on');
+    }
+
+    return '{{ url_for("catalog.index") }}?' + params.toString();
+  }
+
+  function navigateWithCleanUrl() {
+    var overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.classList.add('is-visible');
+    }
+    window.location.href = buildCleanUrl();
+  }
+
+  function autoSubmit(delay) {
+    if (_submitting) return;
+    if (_submitTimer) clearTimeout(_submitTimer);
+    _submitTimer = setTimeout(function() {
+      _submitting = true;
+      navigateWithCleanUrl();
+    }, delay || 50);
+  }
+
+  // ── Genre tree ──
+  (function() {
+    var tree = document.querySelector('.genre-tree');
+    if (!tree) return;
+
+    function closeDeep(details) {
+      details.removeAttribute('open');
+      var nested = details.querySelectorAll('details.genre-tree__details');
+      for (var i = 0; i < nested.length; i++) {
+        nested[i].removeAttribute('open');
+      }
+    }
+
+    function clearSelection() {
+      tree.querySelectorAll('.is-active').forEach(function(el) {
+        el.classList.remove('is-active');
+        el.removeAttribute('aria-current');
+      });
+    }
+
+    tree.querySelectorAll('.genre-tree__details').forEach(function(det) {
+      det.addEventListener('toggle', function() {
+        if (!this.open) return;
+        var list = this.parentElement.parentElement;
+        var siblings = list.querySelectorAll(':scope > .genre-tree__item > .genre-tree__details');
+        for (var i = 0; i < siblings.length; i++) {
+          if (siblings[i] !== this) closeDeep(siblings[i]);
+        }
+      });
+    });
+
+    var filterForm = document.getElementById('filter-form');
+    var genreInput = document.getElementById('genre-id-input');
+    var overlay = document.getElementById('loading-overlay');
+
+    function submitWithGenre(genreId) {
+      clearSelection();
+      genreInput.value = genreId;
+      navigateWithCleanUrl();
+    }
+
+    // Genre leaf buttons
+    tree.querySelectorAll('.genre-tree__link').forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        submitWithGenre(this.dataset.genreId);
+      });
+    });
+
+    // Bug #15: Parent genre summaries are also selectable
+    tree.querySelectorAll('.genre-tree__summary').forEach(function(summary) {
+      summary.addEventListener('click', function(e) {
+        // Only navigate if clicking the text, not the arrow area
+        // Use a small delay to let <details> toggle first, then submit
+        var genreId = this.dataset.genreId;
+        if (genreId) {
+          // Prevent the default toggle behavior, navigate instead
+          e.preventDefault();
+          var det = this.parentElement;
+          // Open the details to show children, and also navigate to this genre
+          det.setAttribute('open', '');
+          submitWithGenre(genreId);
+        }
+      });
+    });
+
+    if (filterForm) {
+      filterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        navigateWithCleanUrl();
+      });
+    }
+  })();
+
+  // ── Toggle: checkbox shows/hides a related body + aria-expanded ──
+  [['f-exclude-narrators', 'narrators-body'],
+   ['f-exclude-authors', 'authors-body'],
+   ['f-only-series', 'series-body']
+  ].forEach(function(p) {
+    var cb = document.getElementById(p[0]);
+    var body = document.getElementById(p[1]);
+    if (!cb || !body) return;
+    function sync() {
+      body.classList.toggle('is-visible', cb.checked);
+      cb.setAttribute('aria-expanded', cb.checked ? 'true' : 'false');
+    }
+    sync();
+    cb.addEventListener('change', function() {
+      sync();
+      autoSubmit();
+    });
+  });
+
+  // ── Auto-submit on checkbox change (series sub-filters, standalone) ──
+  ['f-full-series-sub', 'f-only-standalones'].forEach(function(id) {
+    var cb = document.getElementById(id);
+    if (cb) cb.addEventListener('change', function() { autoSubmit(); });
+  });
+
+  // ── Auto-submit on number input change (debounced) ──
+  ['f-series-min', 'f-series-max', 'f-rating-min', 'f-rating-max'].forEach(function(id) {
+    var inp = document.getElementById(id);
+    if (inp) inp.addEventListener('change', function() { autoSubmit(300); });
+  });
+
+  // ── Mutual exclusivity: series_only <-> standalones_only ──
+  (function() {
+    var seriesCb = document.getElementById('f-only-series');
+    var standalonesCb = document.getElementById('f-only-standalones');
+    if (!seriesCb || !standalonesCb) return;
+    seriesCb.addEventListener('change', function() {
+      if (this.checked) {
+        standalonesCb.checked = false;
+        announceToSR('Фильтр «Только одиночные» снят');
+      }
+    });
+    standalonesCb.addEventListener('change', function() {
+      if (this.checked) {
+        seriesCb.checked = false;
+        var seriesBody = document.getElementById('series-body');
+        if (seriesBody) seriesBody.classList.remove('is-visible');
+        seriesCb.setAttribute('aria-expanded', 'false');
+        announceToSR('Фильтр «Только серии» снят');
+      }
+    });
+  })();
+
+  // ── Mutual exclusivity: hide_listened <-> incomplete_series_only ──
+  (function() {
+    var hideListenedCb = document.getElementById('f-hide-listened');
+    var incompleteCb = document.getElementById('f-incomplete-series');
+    if (!hideListenedCb || !incompleteCb) return;
+    hideListenedCb.addEventListener('change', function() {
+      if (this.checked) {
+        incompleteCb.checked = false;
+        announceToSR('Фильтр «Незавершённые серии» снят');
+      }
+    });
+    incompleteCb.addEventListener('change', function() {
+      if (this.checked) {
+        hideListenedCb.checked = false;
+        announceToSR('Фильтр «Скрыть прослушанные» снят');
+      }
+    });
+  })();
+
+  // ── Remove narrator/author chips (event delegation) → auto-submit ──
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.narrator-chip__remove');
+    if (!btn) return;
+    var chip = btn.parentElement;
+    var name = chip.textContent.replace(/\s*×\s*$/, '').trim();
+    chip.remove();
+    announceToSR('Удалён: ' + name);
+    autoSubmit(100);
+  });
+
+  // ── Add narrator chips → auto-submit ──
+  (function() {
+    var list = document.getElementById('narrators-list');
+    var addBtn = document.getElementById('narrator-add-btn');
+    var addInput = document.getElementById('narrator-add-input');
+    var nameInput = document.getElementById('narrator-name');
+    var confirmBtn = document.getElementById('narrator-confirm');
+    if (!list || !addBtn) return;
+
+    addBtn.addEventListener('click', function() {
+      addBtn.style.display = 'none';
+      addInput.style.display = 'flex';
+      nameInput.focus();
+    });
+
+    function addNarrator() {
+      var name = nameInput.value.trim();
+      if (!name) return;
+      var li = document.createElement('li');
+      li.className = 'narrator-chip';
+      li.setAttribute('role', 'listitem');
+      li.textContent = name;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'narrator-chip__remove';
+      btn.setAttribute('aria-label', 'Убрать: ' + name);
+      btn.innerHTML = '&times;';
+      li.appendChild(btn);
+      list.appendChild(li);
+      var cb = document.getElementById('f-exclude-narrators');
+      if (cb && !cb.checked) {
+        cb.checked = true;
+        cb.dispatchEvent(new Event('change'));
+      }
+      nameInput.value = '';
+      addInput.style.display = 'none';
+      addBtn.style.display = '';
+      announceToSR('Добавлен: ' + name);
+      autoSubmit(100);
+    }
+
+    confirmBtn.addEventListener('click', addNarrator);
+    nameInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); addNarrator(); }
+      if (e.key === 'Escape') { addInput.style.display = 'none'; addBtn.style.display = ''; nameInput.value = ''; addBtn.focus(); }
+    });
+  })();
+
+  // ── Add author chips → auto-submit ──
+  (function() {
+    var list = document.getElementById('authors-list');
+    var addBtn = document.getElementById('author-add-btn');
+    var addInput = document.getElementById('author-add-input');
+    var nameInput = document.getElementById('author-name');
+    var confirmBtn = document.getElementById('author-confirm');
+    if (!list || !addBtn) return;
+
+    addBtn.addEventListener('click', function() {
+      addBtn.style.display = 'none';
+      addInput.style.display = 'flex';
+      nameInput.focus();
+    });
+
+    function addAuthor() {
+      var name = nameInput.value.trim();
+      if (!name) return;
+      var li = document.createElement('li');
+      li.className = 'narrator-chip';
+      li.setAttribute('role', 'listitem');
+      li.textContent = name;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'narrator-chip__remove';
+      btn.setAttribute('aria-label', 'Убрать: ' + name);
+      btn.innerHTML = '&times;';
+      li.appendChild(btn);
+      list.appendChild(li);
+      var cb = document.getElementById('f-exclude-authors');
+      if (cb && !cb.checked) {
+        cb.checked = true;
+        cb.dispatchEvent(new Event('change'));
+      }
+      nameInput.value = '';
+      addInput.style.display = 'none';
+      addBtn.style.display = '';
+      announceToSR('Добавлен: ' + name);
+      autoSubmit(100);
+    }
+
+    confirmBtn.addEventListener('click', addAuthor);
+    nameInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); addAuthor(); }
+      if (e.key === 'Escape') { addInput.style.display = 'none'; addBtn.style.display = ''; nameInput.value = ''; addBtn.focus(); }
+    });
+  })();
+
+  // ── Sort select → auto-submit (Bug #9) ──
+  (function() {
+    var toolbarSort = document.getElementById('toolbar-sort');
+    var mobileSort = document.getElementById('toolbar-sort-mobile');
+    var hiddenSort = document.getElementById('f-sort-hidden');
+
+    if (toolbarSort) {
+      toolbarSort.addEventListener('change', function() {
+        if (hiddenSort) hiddenSort.value = this.value;
+        if (mobileSort) mobileSort.value = this.value;
+        autoSubmit();
+      });
+    }
+    if (mobileSort) {
+      mobileSort.addEventListener('change', function() {
+        if (hiddenSort) hiddenSort.value = this.value;
+        if (toolbarSort) toolbarSort.value = this.value;
+        autoSubmit();
+      });
+    }
+  })();
+
+  // ── 8.26 Mobile drawer ──
+  (function() {
+    var sidebar = document.getElementById('sidebar');
+    var scrim = document.getElementById('drawer-scrim');
+    var menuBtn = document.querySelector('.mobile-bar__menu');
+    var closeBtn = document.querySelector('.sidebar__drawer-close');
+    var mainContent = document.getElementById('main-content');
+    if (!sidebar || !menuBtn) return;
+
+    function openDrawer() {
+      sidebar.classList.add('is-open');
+      scrim.classList.add('is-visible');
+      menuBtn.setAttribute('aria-expanded', 'true');
+      if (mainContent) mainContent.setAttribute('inert', '');
+      closeBtn && closeBtn.focus();
+    }
+
+    function closeDrawer() {
+      sidebar.classList.remove('is-open');
+      scrim.classList.remove('is-visible');
+      menuBtn.setAttribute('aria-expanded', 'false');
+      if (mainContent) mainContent.removeAttribute('inert');
+      menuBtn.focus();
+    }
+
+    menuBtn.addEventListener('click', openDrawer);
+    closeBtn && closeBtn.addEventListener('click', closeDrawer);
+    scrim.addEventListener('click', closeDrawer);
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && sidebar.classList.contains('is-open')) {
+        closeDrawer();
+      }
+    });
+  })();
+
+  // ── Clear ignored list ──
+  (function() {
+    var clearBtn = document.getElementById('clear-ignored-btn');
+    if (!clearBtn) return;
+    clearBtn.addEventListener('click', function() {
+      fetch('{{ url_for("catalog.clear_ignored") }}', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function() { location.reload(); });
+    });
+  })();
+
+  // ── Auth: Login ──
+  function openAuthModal() {
+    var modal = document.getElementById('auth-modal');
+    var scrim = document.getElementById('auth-modal-scrim');
+    if (!modal || !scrim) return;
+    modal.showModal ? modal.showModal() : modal.setAttribute('open', '');
+    scrim.classList.add('is-visible');
+    var emailInput = document.getElementById('auth-email');
+    if (emailInput) setTimeout(function() { emailInput.focus(); }, 100);
+  }
+
+  function closeAuthModal() {
+    var modal = document.getElementById('auth-modal');
+    var scrim = document.getElementById('auth-modal-scrim');
+    if (!modal || !scrim) return;
+    modal.close ? modal.close() : modal.removeAttribute('open');
+    scrim.classList.remove('is-visible');
+    var errorEl = document.getElementById('auth-error');
+    if (errorEl) errorEl.classList.remove('is-visible');
+  }
+
+  function handleLogin() {
+    var emailInput = document.getElementById('auth-email');
+    var passwordInput = document.getElementById('auth-password');
+    var submitBtn = document.getElementById('auth-submit-btn');
+    var errorEl = document.getElementById('auth-error');
+    if (!emailInput || !submitBtn) return;
+    var email = emailInput.value.trim();
+    var password = passwordInput.value.trim();
+
+    if (!email || !password) return;
+
+    submitBtn.disabled = true;
+    submitBtn.classList.add('auth-modal__submit--loading');
+    submitBtn.querySelector('.auth-form__btn-text').textContent = 'Синхронизация...';
+    errorEl.classList.remove('is-visible');
+
+    fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: password }),
+    })
+      .then(function(resp) { return resp.json().then(function(d) { return { status: resp.status, data: d }; }); })
+      .then(function(result) {
+        if (result.data.ok) {
+          closeAuthModal();
+          window.location.reload();
+        } else {
+          errorEl.textContent = result.data.error || 'Ошибка входа';
+          errorEl.classList.add('is-visible');
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('auth-modal__submit--loading');
+          submitBtn.querySelector('.auth-form__btn-text').textContent = 'Войти';
+        }
+      })
+      .catch(function() {
+        errorEl.textContent = 'Ошибка сети';
+        errorEl.classList.add('is-visible');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('auth-modal__submit--loading');
+        submitBtn.querySelector('.auth-form__btn-text').textContent = 'Войти';
+      });
+
+  }
+
+  // ── Auth modal: close, Escape, Enter ──
+  (function() {
+    var closeBtn = document.getElementById('auth-modal-close');
+    var scrim = document.getElementById('auth-modal-scrim');
+    if (closeBtn) closeBtn.addEventListener('click', closeAuthModal);
+    if (scrim) scrim.addEventListener('click', closeAuthModal);
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        var modal = document.getElementById('auth-modal');
+        if (modal && modal.hasAttribute('open')) closeAuthModal();
+      }
+    });
+
+    var pwInput = document.getElementById('auth-password');
+    if (pwInput) {
+      pwInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); handleLogin(); }
+      });
+    }
+  })();
+
+  // ── Auth: Logout ──
+  var logoutBtn = document.getElementById('auth-logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function() {
+      fetch('/auth/logout', { method: 'POST' })
+        .then(function() { window.location.reload(); })
+        .catch(function() { window.location.reload(); });
+    });
+  }
+
+  // ── Auth: Disabled filter click → open login modal ──
+  document.querySelectorAll('[data-auth-required]').forEach(function(el) {
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      openAuthModal();
+    });
+  });
+
+  // ── 9.4 Ignore button — optimistic hide ──
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-ignore');
+    if (!btn) return;
+
+    var card = btn.closest('.book-card');
+    if (!card) return;
+
+    var artId = btn.dataset.artId;
+    var seriesId = btn.dataset.seriesId;
+
+    // Optimistic hide with animation
+    card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    card.style.opacity = '0';
+    card.style.transform = 'scale(0.9)';
+
+    var url;
+    if (artId) {
+      url = '/ignore/' + artId;
+    } else if (seriesId) {
+      url = '/ignore/series/' + seriesId;
+    }
+
+    if (url) {
+      fetch(url, { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.ok) {
+            setTimeout(function() { card.remove(); }, 300);
+            announceToSR('Добавлено в игнор-лист');
+          }
+        })
+        .catch(function() {
+          // Revert on error
+          card.style.opacity = '1';
+          card.style.transform = 'none';
+        });
+    }
+  });
+  </script>
+</body>
+</html>
