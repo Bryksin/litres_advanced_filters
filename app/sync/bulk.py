@@ -263,6 +263,14 @@ def run_bulk(
             log.exception("Bulk sync failed")
             raise
         finally:
+            # If a prior commit failed (e.g. database-is-locked), the session
+            # is in a rolled-back state.  Roll back explicitly so we can write
+            # the final status; we re-read the SyncRun to avoid stale state.
+            if session.is_active and session.in_nested_transaction():
+                session.rollback()
+            if not session.is_active:
+                session.rollback()
+                run = session.get(SyncRun, run.id)
             run.finished_at = datetime.now(timezone.utc)
             session.commit()
             final_status = run.status  # capture before session closes
