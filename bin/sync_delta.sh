@@ -10,7 +10,7 @@
 set -euo pipefail
 
 CONTAINER_NAME="litres-advanced-filters-app"
-DELTA_PAGES=50
+DELTA_PAGES=100
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Starting sync_delta.sh with max-pages $DELTA_PAGES"
 

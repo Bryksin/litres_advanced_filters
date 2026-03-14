@@ -1,0 +1,12 @@
+# LitRes sync schedules (installed for appuser at container startup)
+#
+# Delta sync: Mon-Sat 00:00 — first 100 pages (newest-first), catches new books
+# Full  sync: Sunday  00:00 — full catalog re-crawl, no time limit
+#
+# Logs go to persistent/sync/sync.log (rotating, managed by sync engine)
+
+# Delta sync (Mon-Sat at midnight)
+0 0 * * 1-6  cd /app && python -m app.sync bulk --max-pages 100 >> /app/persistent/sync/cron.log 2>&1
+
+# Full sync (Sunday at midnight)
+0 0 * * 0    cd /app && python -m app.sync bulk >> /app/persistent/sync/cron.log 2>&1

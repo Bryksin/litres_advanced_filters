@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "litres-advanced-filters"
-version = "1.0.2"
+version = "1.0.3"
 description = "Personal web app extending LitRes filtering for audiobooks"
 authors = []
 readme = "README.md"

@@ -2,9 +2,9 @@
 # Build from project root: docker build -f docker/app/Dockerfile -t litres-advanced-filters .
 # Run with persistent mount: docker run -p 5000:5000 -v "$(pwd)/persistent:/app/persistent" litres-advanced-filters
 #
-# Security: app runs as non-root user (appuser, UID 10001). For the mounted
-# persistent/ volume to be writable, ensure host dir is writable by that UID
-# (e.g. on first use: chown -R 10001:10001 persistent).
+# Security: entrypoint runs as root only to chown the mounted persistent/
+# volume, then drops to appuser via gosu. The app itself always runs as
+# non-root (appuser).
 
 FROM python:3.14-slim-bookworm
 
@@ -13,6 +13,11 @@ ENV PYTHONUNBUFFERED=1 \
     FLASK_APP=app
 
 WORKDIR /app
+
+# gosu: lightweight tool to drop from root to appuser in entrypoint
+# (avoids installing sudo; used only during container startup)
+RUN apt-get update && apt-get install -y --no-install-recommends gosu cron \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies into system Python (virtualenvs.create false = use system Python)
 COPY pyproject.toml poetry.lock ./
@@ -39,13 +44,12 @@ COPY templates ./templates
 COPY static ./static
 COPY alembic.ini ./
 COPY db ./db
-COPY docker/app/entrypoint.sh ./
+COPY docker/app/entrypoint.sh docker/app/crontab ./
 RUN mkdir -p /app/persistent && chown -R appuser:appuser /app
-
-USER appuser
 
 EXPOSE 5000
 
+# Entrypoint runs as root to fix persistent/ ownership, then drops to appuser
 ENTRYPOINT ["sh", "entrypoint.sh"]
 # Production WSGI server (multi-worker); Flask dev server is single-threaded and not for production
 CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:create_app()"]
