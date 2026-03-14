@@ -37,13 +37,13 @@ def create_db_engine():
     # SQLite PRAGMAs applied on every new connection:
     # - foreign_keys: enforce FK constraints (off by default in SQLite)
     # - journal_mode=WAL: allow concurrent readers + one writer without blocking
-    # - busy_timeout: wait up to 5s for a write lock instead of failing immediately
+    # - busy_timeout: wait up to 30s for a write lock instead of failing immediately
     @event.listens_for(db_engine, "connect")
     def _set_sqlite_pragma(dbapi_conn, _connection_record):
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA busy_timeout=5000")
+        cursor.execute("PRAGMA busy_timeout=30000")
         cursor.close()
 
     return db_engine
