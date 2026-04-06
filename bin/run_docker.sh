@@ -25,5 +25,6 @@ ENV_ARGS=()
 [ -n "$SECRET_KEY" ] && ENV_ARGS+=(-e "SECRET_KEY=$SECRET_KEY")
 [ -n "$LITRES_EMAIL" ] && ENV_ARGS+=(-e "LITRES_EMAIL=$LITRES_EMAIL")
 [ -n "$LITRES_PASSWORD" ] && ENV_ARGS+=(-e "LITRES_PASSWORD=$LITRES_PASSWORD")
+[ -n "$ADMIN_EMAILS" ] && ENV_ARGS+=(-e "ADMIN_EMAILS=$ADMIN_EMAILS")
 
 docker run --rm --name "$CONTAINER_NAME" -p "127.0.0.1:$PORT:5000" -v "$REPO_ROOT/persistent:/app/persistent" "${ENV_ARGS[@]}" "$IMAGE_NAME"

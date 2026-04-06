@@ -53,6 +53,13 @@ class Config:
     # Sync output directory (logs, failed_books.jsonl)
     SYNC_DIR = os.path.join(BASE_DIR, "persistent", "sync")
 
+    # Admin panel: comma-separated list of LitRes emails with admin access
+    _admin_emails_raw = os.environ.get("ADMIN_EMAILS", "")
+    ADMIN_EMAILS: set[str] | None = (
+        {e.strip().lower() for e in _admin_emails_raw.split(",") if e.strip()}
+        if _admin_emails_raw else None
+    )
+
     # LitRes credentials for profile sync (v1.1)
     LITRES_EMAIL: str | None = os.environ.get("LITRES_EMAIL")
     LITRES_PASSWORD: str | None = os.environ.get("LITRES_PASSWORD")

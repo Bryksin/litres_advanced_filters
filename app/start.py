@@ -32,8 +32,8 @@ def create_app() -> Flask:
     from app.controllers.catalog import bp as catalog_bp
     app.register_blueprint(catalog_bp)
 
-    from app.controllers.admin import bp as admin_bp
-    app.register_blueprint(admin_bp)
+    from app.controllers.admin_panel import bp as admin_panel_bp
+    app.register_blueprint(admin_panel_bp)
 
     from app.controllers.auth import bp as auth_bp
     app.register_blueprint(auth_bp)

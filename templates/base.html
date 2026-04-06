@@ -16,6 +16,9 @@
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <span class="mobile-bar__title">Каталог</span>
+    {% if session.get('is_admin') %}
+    <a href="/admin/" class="mobile-bar__admin-link">Админ</a>
+    {% endif %}
     <div class="sort-control sort-control--mobile">
       <select id="toolbar-sort-mobile" class="sort-select" aria-label="Сортировка">
         <option value="release_date_desc"{{ ' selected' if not settings or settings.sort == 'release_date_desc' }}>По новизне</option>
@@ -42,6 +45,9 @@
       <div class="sidebar__brand">
         <a href="{{ url_for('catalog.index') }}">Литрес Фильтры</a>
         <span class="sidebar__brand-sub">Расширенный каталог</span>
+        {% if session.get('is_admin') %}
+        <a href="/admin/" class="sidebar__admin-link">Админ</a>
+        {% endif %}
       </div>
 
       <form id="filter-form" method="get" action="{{ url_for('catalog.index') }}">

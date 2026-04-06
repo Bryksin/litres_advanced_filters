@@ -1,0 +1,401 @@
+{% extends "admin/base.html" %}
+{% block title %}Панель управления{% endblock %}
+
+{% block content %}
+
+{# ===================== Section 1: Last Sync Summary ===================== #}
+<section class="admin-section">
+  <h2 class="admin-section__title">Последняя синхронизация</h2>
+  {% if last_run %}
+  <div class="admin-card">
+    <div class="info-row">
+      <span class="info-label">Статус</span>
+      <span class="info-value">
+        <span class="badge badge--{{ last_run.status }}">{{ last_run.status }}</span>
+      </span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Тип</span>
+      <span class="info-value">{{ last_run.type }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Начало</span>
+      <span class="info-value">{{ last_run.started_at.strftime('%d.%m.%Y %H:%M:%S') if last_run.started_at else '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Окончание</span>
+      <span class="info-value">{{ last_run.finished_at.strftime('%d.%m.%Y %H:%M:%S') if last_run.finished_at else '—' }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Длительность</span>
+      <span class="info-value">{{ duration_str }}</span>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-item">
+        <div class="stat-item__value">{{ last_run.books_new }}</div>
+        <div class="stat-item__label">Новых</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-item__value">{{ last_run.books_updated }}</div>
+        <div class="stat-item__label">Обновлено</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-item__value">{{ last_run.books_failed }}</div>
+        <div class="stat-item__label">Ошибок</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-item__value">{{ last_run.pages_fetched }}</div>
+        <div class="stat-item__label">Страниц</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-item__value">{{ last_run.series_fetched }}</div>
+        <div class="stat-item__label">Серий</div>
+      </div>
+    </div>
+
+    {% if last_run.error_message %}
+    <div class="alert-error">
+      <strong>Ошибка:</strong> {{ last_run.error_message }}
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="admin-card empty-state">
+    Синхронизация ещё не выполнялась
+  </div>
+  {% endif %}
+</section>
+
+{# ===================== Section 2: Sync History ===================== #}
+<section class="admin-section">
+  <h2 class="admin-section__title">История синхронизаций</h2>
+  {% if sync_runs %}
+  <div class="admin-card">
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Тип</th>
+            <th>Статус</th>
+            <th>Начало</th>
+            <th>Длительность</th>
+            <th>Новых</th>
+            <th>Обновлено</th>
+            <th>Ошибок</th>
+            <th>Страниц</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for run in sync_runs %}
+          <tr>
+            <td>{{ run.id }}</td>
+            <td>{{ run.type }}</td>
+            <td><span class="badge badge--{{ run.status }}">{{ run.status }}</span></td>
+            <td>{{ run.started_at.strftime('%d.%m %H:%M') if run.started_at else '—' }}</td>
+            <td>
+              {% if run.finished_at and run.started_at %}
+                {% set dur = (run.finished_at - run.started_at).total_seconds() | int %}
+                {{ '%dч %02dм' | format(dur // 3600, (dur % 3600) // 60) if dur >= 3600 else '%dм %02dс' | format(dur // 60, dur % 60) }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>{{ run.books_new }}</td>
+            <td>{{ run.books_updated }}</td>
+            <td>{{ run.books_failed }}</td>
+            <td>{{ run.pages_fetched }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="admin-card empty-state">
+    Нет записей о синхронизациях
+  </div>
+  {% endif %}
+</section>
+
+{# ===================== Section 3: Cron Schedules ===================== #}
+<section class="admin-section">
+  <h2 class="admin-section__title">Расписание CRON</h2>
+  {% if cron_jobs %}
+  <div class="admin-card">
+    <div class="admin-table-wrap">
+      <table class="admin-table" id="cron-table">
+        <thead>
+          <tr>
+            <th>Описание</th>
+            <th>Расписание</th>
+            <th>Команда</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in cron_jobs %}
+          <tr data-job-index="{{ loop.index0 }}">
+            <td>{{ job.description }}</td>
+            <td class="text-mono">{{ job.schedule }}</td>
+            <td class="text-mono text-truncate" title="{{ job.command }}">{{ job.command }}</td>
+            <td>
+              <button type="button" class="admin-btn admin-btn--sm js-cron-edit"
+                      data-index="{{ loop.index0 }}">Изменить</button>
+            </td>
+          </tr>
+          <tr class="cron-edit-row" id="cron-edit-{{ loop.index0 }}">
+            <td colspan="4">
+              <div class="cron-edit-form">
+                <label style="color:var(--sb-accent-dim); font-size:0.75rem;">Расписание:</label>
+                <input type="text" class="admin-input js-cron-schedule"
+                       value="{{ job.schedule }}"
+                       placeholder="0 0 * * 1-6"
+                       style="max-width: 180px;">
+                <label style="color:var(--sb-accent-dim); font-size:0.75rem;">Команда:</label>
+                <input type="text" class="admin-input js-cron-command"
+                       value="{{ job.command }}"
+                       placeholder="cd /app && python -m app.sync bulk --max-pages 100 ..."
+                       style="flex:1; min-width: 200px;">
+                <button type="button" class="admin-btn admin-btn--primary admin-btn--sm js-cron-save"
+                        data-index="{{ loop.index0 }}">Сохранить</button>
+                <button type="button" class="admin-btn admin-btn--sm js-cron-cancel"
+                        data-index="{{ loop.index0 }}">Отмена</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div id="cron-message" style="margin-top: var(--space-3);"></div>
+  </div>
+  {% else %}
+  <div class="admin-card empty-state">
+    Файл crontab не найден
+  </div>
+  {% endif %}
+</section>
+
+{# ===================== Section 4: Failed Books ===================== #}
+{% if failed_books %}
+<section class="admin-section">
+  <h2 class="admin-section__title">Ошибки последней синхронизации</h2>
+  <div class="admin-card">
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID книги</th>
+            <th>Название</th>
+            <th>Ошибка</th>
+            <th>Страница</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fb in failed_books %}
+          <tr>
+            <td>{{ fb.book_id }}</td>
+            <td><a href="https://www.litres.ru/audiobook/{{ fb.book_id }}/" target="_blank" rel="noopener"
+                   style="color: var(--sb-accent);">{{ fb.title }}</a></td>
+            <td class="text-truncate" title="{{ fb.error }}">{{ fb.error }}</td>
+            <td>{{ fb.page_number }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top: var(--space-4);">
+      <button type="button" class="admin-btn admin-btn--primary" id="btn-retry"
+              data-file="{{ failed_file }}">
+        Повторить ({{ failed_books | length }} книг)
+      </button>
+      <span id="retry-message" style="margin-left: var(--space-3); font-size: 0.82rem;"></span>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ===================== Section 5: Manual Sync ===================== #}
+<section class="admin-section">
+  <h2 class="admin-section__title">Ручной запуск</h2>
+  <div class="admin-card">
+    <div class="btn-group">
+      <button type="button" class="admin-btn admin-btn--primary" id="btn-delta">
+        Дельта-синхронизация (100 стр.)
+      </button>
+      <button type="button" class="admin-btn" id="btn-full">
+        Полная синхронизация
+      </button>
+    </div>
+    <div id="sync-message" style="margin-top: var(--space-3);"></div>
+  </div>
+</section>
+
+
+{# ===================== JavaScript ===================== #}
+<script>
+(function() {
+  "use strict";
+
+  /* ---------- helpers ---------- */
+  function setMsg(el, html, cls) {
+    el.innerHTML = '<div class="' + cls + '">' + html + '</div>';
+  }
+
+  async function postJSON(url, body) {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body || {})
+    });
+    const data = await resp.json().catch(function() { return {}; });
+    return {ok: resp.ok, status: resp.status, data: data};
+  }
+
+  /* ---------- Manual sync triggers ---------- */
+  var syncMsg = document.getElementById("sync-message");
+
+  document.getElementById("btn-delta").addEventListener("click", function() {
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Запуск...';
+    setMsg(syncMsg, "", "");
+    postJSON("/admin/sync/bulk", {max_pages: 100}).then(function(r) {
+      if (r.ok) {
+        setMsg(syncMsg, "Дельта-синхронизация запущена в фоне. Обновите страницу через несколько минут.", "alert-success");
+      } else {
+        setMsg(syncMsg, "Ошибка: " + (r.data.error || "Неизвестная ошибка"), "alert-error");
+      }
+      btn.disabled = false;
+      btn.textContent = "Дельта-синхронизация (100 стр.)";
+    }).catch(function(e) {
+      setMsg(syncMsg, "Сетевая ошибка: " + e.message, "alert-error");
+      btn.disabled = false;
+      btn.textContent = "Дельта-синхронизация (100 стр.)";
+    });
+  });
+
+  document.getElementById("btn-full").addEventListener("click", function() {
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Запуск...';
+    setMsg(syncMsg, "", "");
+    postJSON("/admin/sync/bulk", {}).then(function(r) {
+      if (r.ok) {
+        setMsg(syncMsg, "Полная синхронизация запущена в фоне. Это может занять более часа.", "alert-success");
+      } else {
+        setMsg(syncMsg, "Ошибка: " + (r.data.error || "Неизвестная ошибка"), "alert-error");
+      }
+      btn.disabled = false;
+      btn.textContent = "Полная синхронизация";
+    }).catch(function(e) {
+      setMsg(syncMsg, "Сетевая ошибка: " + e.message, "alert-error");
+      btn.disabled = false;
+      btn.textContent = "Полная синхронизация";
+    });
+  });
+
+  /* ---------- Cron edit ---------- */
+  document.querySelectorAll(".js-cron-edit").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      var idx = this.dataset.index;
+      var row = document.getElementById("cron-edit-" + idx);
+      row.classList.toggle("is-open");
+    });
+  });
+
+  document.querySelectorAll(".js-cron-cancel").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      var idx = this.dataset.index;
+      document.getElementById("cron-edit-" + idx).classList.remove("is-open");
+    });
+  });
+
+  var cronMsg = document.getElementById("cron-message");
+
+  document.querySelectorAll(".js-cron-save").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      var idx = parseInt(this.dataset.index, 10);
+      var editRow = document.getElementById("cron-edit-" + idx);
+      var schedule = editRow.querySelector(".js-cron-schedule").value.trim();
+      var command = editRow.querySelector(".js-cron-command").value.trim();
+
+      if (!schedule || !command) {
+        if (cronMsg) setMsg(cronMsg, "Заполните все поля", "alert-error");
+        return;
+      }
+
+      /* Collect all jobs (current values from the table, with override for edited one) */
+      var jobs = [];
+      document.querySelectorAll("#cron-table tbody tr[data-job-index]").forEach(function(tr) {
+        var i = parseInt(tr.dataset.jobIndex, 10);
+        var eRow = document.getElementById("cron-edit-" + i);
+        if (i === idx) {
+          jobs.push({schedule: schedule, command: command});
+        } else {
+          jobs.push({
+            schedule: eRow.querySelector(".js-cron-schedule").value.trim(),
+            command: eRow.querySelector(".js-cron-command").value.trim()
+          });
+        }
+      });
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>';
+
+      postJSON("/admin/cron/update", {jobs: jobs}).then(function(r) {
+        if (r.ok) {
+          if (cronMsg) setMsg(cronMsg, "Расписание обновлено и установлено", "alert-success");
+          /* Update visible table cells */
+          var dataRow = document.querySelector('tr[data-job-index="' + idx + '"]');
+          if (dataRow) {
+            var tds = dataRow.querySelectorAll("td");
+            tds[1].textContent = schedule;
+            tds[2].textContent = command;
+            tds[2].title = command;
+          }
+          editRow.classList.remove("is-open");
+        } else {
+          if (cronMsg) setMsg(cronMsg, "Ошибка: " + (r.data.error || "Неизвестная ошибка"), "alert-error");
+        }
+        btn.disabled = false;
+        btn.textContent = "Сохранить";
+      }).catch(function(e) {
+        if (cronMsg) setMsg(cronMsg, "Сетевая ошибка: " + e.message, "alert-error");
+        btn.disabled = false;
+        btn.textContent = "Сохранить";
+      });
+    });
+  });
+
+  /* ---------- Retry failed books ---------- */
+  var retryBtn = document.getElementById("btn-retry");
+  if (retryBtn) {
+    var retryMsg = document.getElementById("retry-message");
+    retryBtn.addEventListener("click", function() {
+      var btn = this;
+      var file = btn.dataset.file;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Повтор...';
+      retryMsg.textContent = "";
+
+      postJSON("/admin/sync/retry", {failed_file: file}).then(function(r) {
+        if (r.ok) {
+          retryMsg.innerHTML = '<span style="color:#6dd9a0;">Повтор запущен в фоне. Обновите страницу позже.</span>';
+        } else {
+          retryMsg.innerHTML = '<span style="color:#f07070;">Ошибка: ' + (r.data.error || "Неизвестная ошибка") + '</span>';
+        }
+        btn.disabled = false;
+        btn.textContent = "Повторить";
+      }).catch(function(e) {
+        retryMsg.innerHTML = '<span style="color:#f07070;">Сетевая ошибка: ' + e.message + '</span>';
+        btn.disabled = false;
+        btn.textContent = "Повторить";
+      });
+    });
+  }
+})();
+</script>
+{% endblock %}

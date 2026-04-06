@@ -250,6 +250,9 @@ class SyncRun(Base):
     pages_fetched: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     books_upserted: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     series_fetched: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    books_new: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    books_updated: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    books_failed: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     last_page_fetched: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
