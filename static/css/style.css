@@ -125,6 +125,16 @@ button, input, select { font-family: inherit; }
   letter-spacing: 0.02em;
   text-transform: uppercase;
 }
+.sidebar__admin-link {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--sb-accent) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sidebar__admin-link:hover { text-decoration: underline; }
 
 /* Zone 3: Filters (own scroll container, fills remaining space) */
 .sidebar__filters {
@@ -1273,6 +1283,17 @@ button, input, select { font-family: inherit; }
     color: var(--text);
     flex: 1;
   }
+  .mobile-bar__admin-link {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent, #e8c58e);
+    text-decoration: none;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid currentColor;
+    border-radius: var(--radius, 6px);
+    flex-shrink: 0;
+  }
+  .mobile-bar__admin-link:hover { text-decoration: underline; }
 
   .sidebar {
     position: fixed;

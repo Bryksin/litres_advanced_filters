@@ -8,7 +8,15 @@ echo "Fixing persistent/ ownership..."
 chown -R appuser:appuser /app/persistent
 
 echo "Installing sync crontab for appuser..."
-crontab -u appuser /app/crontab
+if [ -f /app/persistent/crontab ]; then
+    echo "  Using persistent crontab from /app/persistent/crontab"
+    crontab -u appuser /app/persistent/crontab
+else
+    echo "  First boot: copying default crontab to /app/persistent/crontab"
+    cp /app/crontab /app/persistent/crontab
+    chown appuser:appuser /app/persistent/crontab
+    crontab -u appuser /app/persistent/crontab
+fi
 cron
 
 echo "Applying database migrations..."

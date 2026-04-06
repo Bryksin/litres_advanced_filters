@@ -341,6 +341,31 @@ export LITRES_EMAIL="your@email.com"
 export LITRES_PASSWORD="your-password"
 ```
 
+### Admin Panel (`ADMIN_EMAILS`)
+
+A protected admin dashboard for monitoring sync jobs, managing cron schedules, and retrying failed books. Set the `ADMIN_EMAILS` environment variable to enable it:
+
+```bash
+export ADMIN_EMAILS="alice@example.com,bob@example.com"
+```
+
+**How it works:** Users who log into LitRes with an email from the allowlist automatically get access to the admin panel via the "Админ" link in the navigation. No separate admin login is required — admin access piggybacks on the existing LitRes authentication.
+
+**Features:**
+- Sync run history with detailed stats (books new/updated/failed, pages fetched, duration)
+- Cron schedule viewing and editing (persisted across container restarts)
+- Failed books display with one-click retry
+- Manual sync triggers (delta and full)
+
+**If `ADMIN_EMAILS` is not set:** the admin panel is completely hidden and all admin routes return 404. Non-admin users never see the "Админ" link.
+
+Email matching is case-insensitive. Pass to Docker the same way as other env vars:
+
+```bash
+export ADMIN_EMAILS="alice@example.com,bob@example.com"
+./bin/run_docker.sh
+```
+
 ---
 
 ## Docker
@@ -351,7 +376,7 @@ export LITRES_PASSWORD="your-password"
 ./bin/stop_docker.sh                    # Stop container
 ```
 
-`run_docker.sh` automatically forwards `SECRET_KEY`, `LITRES_EMAIL`, and `LITRES_PASSWORD` environment variables to the container when set.
+`run_docker.sh` automatically forwards `SECRET_KEY`, `LITRES_EMAIL`, `LITRES_PASSWORD`, and `ADMIN_EMAILS` environment variables to the container when set.
 
 Inside the container the sync CLI and admin endpoints work the same way.
 

@@ -16,7 +16,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.db.base import Base
-from app.db.models import SyncConfig, SyncRun
+from app.db.models import SyncConfig, SyncRun, User, UserSettings
+
+# Admin email used across all endpoint tests
+_ADMIN_EMAIL = "admin@test.com"
+_ADMIN_EMAILS = {_ADMIN_EMAIL}
+
+
+def _seed_admin_user(factory):
+    """Create an admin user (id=1) with litres_login in the test DB."""
+    with factory() as s:
+        s.add(User(id=1, litres_login=_ADMIN_EMAIL, created_at=datetime.now(timezone.utc)))
+        s.add(UserSettings(user_id=1))
+        s.commit()
 
 
 @pytest.fixture
@@ -39,6 +51,7 @@ def endpoint_db():
         ))
         s.commit()
 
+    _seed_admin_user(Factory)
     return Factory
 
 
@@ -50,9 +63,14 @@ def flask_client(endpoint_db):
     application.config["TESTING"] = True
 
     with patch("app.middleware.SessionLocal", endpoint_db), \
-         patch("app.controllers.admin.SessionLocal", endpoint_db), \
+         patch("app.controllers.admin_panel.SessionLocal", endpoint_db), \
+         patch("app.controllers.admin_panel.Config") as mock_cfg, \
          patch("app.sync.bulk.SessionLocal", endpoint_db):
+        mock_cfg.ADMIN_EMAILS = _ADMIN_EMAILS
         with application.test_client() as c:
+            # Pre-set session to use seeded admin user
+            with c.session_transaction() as sess:
+                sess["user_id"] = 1
             yield c
 
 
@@ -63,14 +81,19 @@ def test_status_never_run(endpoint_db):
     application = create_app()
     application.config["TESTING"] = True
 
-    # Empty DB — no SyncRun rows
+    # Empty DB — no SyncRun rows, but needs an admin user
     empty_engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
     Base.metadata.create_all(empty_engine)
     EmptyFactory = sessionmaker(bind=empty_engine)
+    _seed_admin_user(EmptyFactory)
 
     with patch("app.middleware.SessionLocal", EmptyFactory), \
-         patch("app.controllers.admin.SessionLocal", EmptyFactory):
+         patch("app.controllers.admin_panel.SessionLocal", EmptyFactory), \
+         patch("app.controllers.admin_panel.Config") as mock_cfg:
+        mock_cfg.ADMIN_EMAILS = _ADMIN_EMAILS
         with application.test_client() as c:
+            with c.session_transaction() as sess:
+                sess["user_id"] = 1
             resp = c.get("/admin/sync/status")
             assert resp.status_code == 200
             data = resp.get_json()
@@ -109,9 +132,13 @@ def test_concurrent_bulk_returns_409(endpoint_db):
         s.commit()
 
     with patch("app.middleware.SessionLocal", endpoint_db), \
-         patch("app.controllers.admin.SessionLocal", endpoint_db), \
+         patch("app.controllers.admin_panel.SessionLocal", endpoint_db), \
+         patch("app.controllers.admin_panel.Config") as mock_cfg, \
          patch("app.sync.bulk.SessionLocal", endpoint_db):
+        mock_cfg.ADMIN_EMAILS = _ADMIN_EMAILS
         with application.test_client() as c:
+            with c.session_transaction() as sess:
+                sess["user_id"] = 1
             resp = c.post("/admin/sync/bulk", json={"max_pages": 1})
             assert resp.status_code == 409
             data = resp.get_json()
@@ -140,8 +167,12 @@ def test_status_returns_latest_run(endpoint_db):
         s.commit()
 
     with patch("app.middleware.SessionLocal", endpoint_db), \
-         patch("app.controllers.admin.SessionLocal", endpoint_db):
+         patch("app.controllers.admin_panel.SessionLocal", endpoint_db), \
+         patch("app.controllers.admin_panel.Config") as mock_cfg:
+        mock_cfg.ADMIN_EMAILS = _ADMIN_EMAILS
         with application.test_client() as c:
+            with c.session_transaction() as sess:
+                sess["user_id"] = 1
             resp = c.get("/admin/sync/status")
             assert resp.status_code == 200
             data = resp.get_json()

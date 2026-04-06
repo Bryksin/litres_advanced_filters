@@ -272,6 +272,9 @@ def run_bulk(
                 session.rollback()
                 run = session.get(SyncRun, run.id)
             run.finished_at = datetime.now(timezone.utc)
+            run.books_new = new_count
+            run.books_updated = updated_count
+            run.books_failed = failed_count
             session.commit()
             final_status = run.status  # capture before session closes
 

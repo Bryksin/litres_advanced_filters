@@ -3,8 +3,9 @@
 import json
 import logging
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, g, jsonify, request, session
 
+from app.config import Config
 from app.db import SessionLocal
 from app.db.models import User, UserListenedBook
 from app.scrapers.auth import get_valid_token, LitresAuthError
@@ -71,6 +72,12 @@ def login():
             user.litres_login = email
             s.commit()
 
+    # Grant admin access if email is in the allowlist
+    if Config.ADMIN_EMAILS and email.strip().lower() in Config.ADMIN_EMAILS:
+        session["is_admin"] = True
+    else:
+        session.pop("is_admin", None)
+
     # Step 2: Sync profile (best-effort — auth already succeeded)
     sync_error = None
     try:
@@ -96,6 +103,7 @@ def login():
 @bp.route("/logout", methods=["POST"])
 def logout():
     """Clear stored auth tokens and listened books."""
+    session.pop("is_admin", None)
     with SessionLocal() as s:
         user = s.get(User, g.user_id)
         if user:
