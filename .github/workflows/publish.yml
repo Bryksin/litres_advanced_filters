@@ -14,7 +14,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - uses: actions/checkout@v5
@@ -33,12 +33,32 @@ jobs:
         id: meta
         run: |
           REPO="${{ secrets.DOCKERHUB_USERNAME }}/litres_advanced_filters"
+
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            # Explicit tag push (manual major/minor release)
             VERSION="${GITHUB_REF_NAME#v}"
-            echo "tags=${REPO}:${VERSION},${REPO}:latest" >> "$GITHUB_OUTPUT"
           else
-            echo "tags=${REPO}:latest" >> "$GITHUB_OUTPUT"
+            # Master push without tag — auto-increment patch version
+            LATEST_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+            if [[ -z "$LATEST_TAG" ]]; then
+              VERSION="1.0.0"
+            else
+              # Parse major.minor.patch and bump patch
+              BASE="${LATEST_TAG#v}"
+              MAJOR=$(echo "$BASE" | cut -d. -f1)
+              MINOR=$(echo "$BASE" | cut -d. -f2)
+              PATCH=$(echo "$BASE" | cut -d. -f3)
+              PATCH=$((PATCH + 1))
+              VERSION="${MAJOR}.${MINOR}.${PATCH}"
+            fi
+            # Create and push the new tag (won't re-trigger: GITHUB_TOKEN
+            # pushes don't trigger workflows to prevent infinite loops)
+            git tag "v${VERSION}"
+            git push origin "v${VERSION}"
           fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tags=${REPO}:${VERSION},${REPO}:latest" >> "$GITHUB_OUTPUT"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
