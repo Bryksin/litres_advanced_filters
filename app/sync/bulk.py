@@ -38,13 +38,15 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _open_sync_run(session: Session, config: SyncConfig, resume: bool) -> SyncRun:
+def _open_sync_run(
+    session: Session, config: SyncConfig, resume: bool, sync_type: str = "bulk",
+) -> SyncRun:
     """Create a new SyncRun or resume the latest interrupted one."""
     if resume:
         interrupted = (
             session.query(SyncRun)
             .filter(
-                SyncRun.type == "bulk",
+                SyncRun.type.in_(["bulk", "delta"]),
                 SyncRun.status.in_(["interrupted", "failed"]),
                 SyncRun.last_page_fetched.isnot(None),
             )
@@ -64,7 +66,7 @@ def _open_sync_run(session: Session, config: SyncConfig, resume: bool) -> SyncRu
 
     run = SyncRun(
         sync_config_id=config.id,
-        type="bulk",
+        type=sync_type,
         started_at=datetime.now(timezone.utc),
         status="running",
         pages_fetched=0,
@@ -110,7 +112,8 @@ def run_bulk(
     with SessionLocal() as session:
         check_no_running_sync(session)
         config = get_sync_config(session)
-        run = _open_sync_run(session, config, resume)
+        sync_type = "delta" if max_pages is not None else "bulk"
+        run = _open_sync_run(session, config, resume, sync_type=sync_type)
 
         # Resume from the page AFTER the last completed one.
         # last_page_fetched=None means never started → start from 0.

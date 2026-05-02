@@ -61,10 +61,35 @@ def get_sync_config(session: Session) -> SyncConfig:
 
 
 def check_no_running_sync(session: Session) -> None:
-    running = session.query(SyncRun).filter_by(status="running").first()
-    if running:
+    running_rows = session.query(SyncRun).filter_by(status="running").all()
+    now = datetime.now(timezone.utc)
+    timeout = 24 * 3600  # 24 hours in seconds
+
+    for run in running_rows:
+        if run.finished_at is not None:
+            run.status = "failed"
+            run.error_message = (
+                "Auto-recovered: process crashed after setting finished_at"
+            )
+            log.warning(
+                "Auto-recovered stuck SyncRun id=%d: finished_at was set but status was still 'running'",
+                run.id,
+            )
+        elif run.started_at and (now - run.started_at.replace(tzinfo=timezone.utc)).total_seconds() > timeout:
+            run.status = "failed"
+            run.error_message = "Auto-recovered: sync exceeded 24h timeout"
+            log.warning(
+                "Auto-recovered stuck SyncRun id=%d: started_at=%s exceeded 24h timeout",
+                run.id,
+                run.started_at,
+            )
+
+    session.commit()
+
+    still_running = session.query(SyncRun).filter_by(status="running").first()
+    if still_running:
         raise RuntimeError(
-            f"Sync already running: SyncRun id={running.id} started at {running.started_at}. "
+            f"Sync already running: SyncRun id={still_running.id} started at {still_running.started_at}. "
             "If the process crashed, manually update its status to 'failed' to unblock."
         )
 

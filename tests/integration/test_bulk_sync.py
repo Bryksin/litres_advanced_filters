@@ -79,7 +79,7 @@ def test_run_bulk_two_pages(sync_db):
         run_bulk(resume=False, max_pages=2, dry_run=False, verbose=True)
 
     with sync_db() as s:
-        run = s.query(SyncRun).filter_by(type="bulk").order_by(SyncRun.started_at.desc()).first()
+        run = s.query(SyncRun).filter_by(type="delta").order_by(SyncRun.started_at.desc()).first()
         assert run is not None
         assert run.status == "done"
         assert run.pages_fetched == 2

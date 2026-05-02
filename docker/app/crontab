@@ -5,6 +5,8 @@
 #
 # Logs go to persistent/sync/sync.log (rotating, managed by sync engine)
 
+PATH=/usr/local/bin:/usr/bin:/bin
+
 # Delta sync (Mon-Sat at midnight)
 0 0 * * 1-6  cd /app && python -m app.sync bulk --max-pages 100 >> /app/persistent/sync/cron.log 2>&1
 

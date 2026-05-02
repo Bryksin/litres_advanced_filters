@@ -16,7 +16,7 @@
     </div>
     <div class="info-row">
       <span class="info-label">Тип</span>
-      <span class="info-value">{{ last_run.type }}</span>
+      <span class="info-value">{% if last_run.type == 'delta' %}Дельта{% elif last_run.type == 'bulk' %}Полная{% elif last_run.type == 'profile' %}Профиль{% else %}{{ last_run.type }}{% endif %}</span>
     </div>
     <div class="info-row">
       <span class="info-label">Начало</span>
@@ -91,7 +91,7 @@
           {% for run in sync_runs %}
           <tr>
             <td>{{ run.id }}</td>
-            <td>{{ run.type }}</td>
+            <td>{% if run.type == 'delta' %}Дельта{% elif run.type == 'bulk' %}Полная{% elif run.type == 'profile' %}Профиль{% else %}{{ run.type }}{% endif %}</td>
             <td><span class="badge badge--{{ run.status }}">{{ run.status }}</span></td>
             <td>{{ run.started_at.strftime('%d.%m %H:%M') if run.started_at else '—' }}</td>
             <td>

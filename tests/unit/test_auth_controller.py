@@ -106,7 +106,11 @@ class TestLoginEndpoint:
     @patch("app.controllers.auth.run_profile")
     @patch("app.controllers.auth.get_valid_token")
     def test_login_succeeds_when_profile_sync_fails(self, mock_token, mock_sync, auth_app):
-        """Auth success + profile sync failure should still return ok=True."""
+        """Auth success + background profile sync failure still returns ok=True.
+
+        Profile sync runs in a background thread, so sync errors
+        don't affect the login response.
+        """
         app, Factory = auth_app
         mock_token.return_value = "fake-jwt"
         mock_sync.side_effect = RuntimeError("API returned 422")
@@ -122,7 +126,7 @@ class TestLoginEndpoint:
         assert resp.status_code == 200
         assert data["ok"] is True
         assert data["email"] == "test@example.com"
-        assert "warning" in data
+        assert data["syncing"] is True
 
     @patch("app.controllers.auth.run_profile")
     @patch("app.controllers.auth.get_valid_token")

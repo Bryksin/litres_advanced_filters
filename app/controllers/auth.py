@@ -2,6 +2,8 @@
 
 import json
 import logging
+import threading
+from datetime import datetime, timezone
 
 from flask import Blueprint, g, jsonify, request, session
 
@@ -78,26 +80,36 @@ def login():
     else:
         session.pop("is_admin", None)
 
-    # Step 2: Sync profile (best-effort — auth already succeeded)
-    sync_error = None
-    try:
-        run_profile(
-            session_factory=SessionLocal,
-            email=email,
-            password=password,
-            user_id=g.user_id,
-        )
-    except Exception:
-        log.exception("Profile sync failed after successful login")
-        sync_error = "Login successful, but listened books sync failed"
+    # Step 2: Trigger background profile sync (non-blocking)
+    user_id = g.user_id
+
+    def _bg_sync():
+        try:
+            run_profile(
+                session_factory=SessionLocal,
+                email=email,
+                password=password,
+                user_id=user_id,
+            )
+            log.info("Background profile sync completed after login for user %d", user_id)
+        except Exception:
+            log.exception("Background profile sync failed after login for user %d", user_id)
+
+    t = threading.Thread(target=_bg_sync, daemon=True, name=f"login-profile-sync-{user_id}")
+    t.start()
+
+    # Record sync trigger time so middleware doesn't re-trigger immediately
+    session["_profile_sync_started"] = datetime.now(timezone.utc).isoformat()
 
     count = _get_listened_count(SessionLocal, g.user_id)
-    log.info("Login complete: %d listened books (sync_error=%s)", count, sync_error)
+    log.info("Login complete: %d listened books (profile sync running in background)", count)
 
-    result = {"ok": True, "listened_count": count, "email": email}
-    if sync_error:
-        result["warning"] = sync_error
-    return jsonify(result)
+    return jsonify({
+        "ok": True,
+        "listened_count": count,
+        "email": email,
+        "syncing": True,
+    })
 
 
 @bp.route("/logout", methods=["POST"])
