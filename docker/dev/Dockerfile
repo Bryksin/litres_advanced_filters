@@ -6,8 +6,8 @@
 FROM python:3.14-slim-bookworm
 
 # Build arguments for user management (project standard)
-ARG DOCKER_UID=10101
-ARG DOCKER_GID=10101
+ARG DOCKER_UID=1000
+ARG DOCKER_GID=1000
 # Workspace folder name (passed from devcontainer.json via ${localWorkspaceFolderBasename})
 ARG WORKSPACE_NAME=workspace
 

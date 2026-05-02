@@ -21,9 +21,9 @@
     "${localWorkspaceFolderBasename}-devcontainer",
     "--hostname",
     "devcontainer",
-    "--tmpfs", "/home/appuser/.claude/cache:uid=10101,gid=10101",
-    "--tmpfs", "/home/appuser/.claude/session-env:uid=10101,gid=10101",
-    "--tmpfs", "/home/appuser/.claude/ide:uid=10101,gid=10101"
+    "--tmpfs", "/home/appuser/.claude/cache:uid=1000,gid=1000",
+    "--tmpfs", "/home/appuser/.claude/session-env:uid=1000,gid=1000",
+    "--tmpfs", "/home/appuser/.claude/ide:uid=1000,gid=1000"
   ],
   "mounts": [
     {
