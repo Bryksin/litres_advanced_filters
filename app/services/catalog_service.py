@@ -10,6 +10,7 @@ Two-query approach:
 import logging
 from dataclasses import dataclass
 from datetime import datetime
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from sqlalchemy import case, func, literal
 from sqlalchemy.orm import Session, selectinload
@@ -38,6 +39,17 @@ def _abs_url(path: str) -> str:
     if path.startswith("http"):
         return path
     return _LITRES_BASE + path
+
+
+def _series_url(raw_url: str) -> str:
+    """Build a series URL that filters to audiobooks available by subscription."""
+    url = _abs_url(raw_url)
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+    params["art_types"] = ["audiobook"]
+    params["only_litres_subscription_arts"] = ["true"]
+    new_query = urlencode(params, doseq=True)
+    return urlunparse(parsed._replace(query=new_query))
 
 
 def _sorted_author_names(book_authors: list[BookAuthor]) -> list[str]:
@@ -366,7 +378,7 @@ def _load_card_details(session, page_groups):
                 type="series",
                 title=series.name,
                 cover_url=first_book.cover_url if first_book else None,
-                url=_abs_url(series.url) if series.url else (_abs_url(first_book.url) if first_book else ""),
+                url=_series_url(series.url) if series.url else (_series_url(first_book.url) if first_book else ""),
                 rating_avg=round(avg_rating, 1) if avg_rating else None,
                 rating_count=total_rc,
                 series_id=sid,

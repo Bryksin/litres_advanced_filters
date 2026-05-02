@@ -27,6 +27,13 @@ class Config:
     # Session secret (set via env in production)
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-change-in-production"
 
+    # Persistent session: keep users logged in for 365 days
+    from datetime import timedelta
+    PERMANENT_SESSION_LIFETIME = timedelta(days=365)
+
+    # Profile sync staleness threshold (hours) — auto-resync if older
+    PROFILE_SYNC_STALE_HOURS: int = 20
+
     # Debug mode
     DEBUG = os.environ.get("FLASK_DEBUG", "0").lower() in ("1", "true", "yes")
 

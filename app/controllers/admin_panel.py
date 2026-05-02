@@ -93,6 +93,9 @@ def read_crontab() -> list[dict]:
             # Keep the last comment before a job line as its description
             prev_comment = stripped.lstrip("# ").strip()
             continue
+        # Skip environment variable assignments (e.g. PATH=...)
+        if re.match(r"^[A-Z_]+=", stripped):
+            continue
 
         # Cron job line: 5 schedule fields + command
         parts = stripped.split(None, 5)
@@ -236,6 +239,8 @@ def cron_update():
         "# LitRes sync schedules (managed by admin panel)\n"
         "#\n"
         "# Edited via /admin/ — changes persist across container restarts\n"
+        "\n"
+        "PATH=/usr/local/bin:/usr/bin:/bin\n"
         "\n"
     )
     lines = [header]
