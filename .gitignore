@@ -22,6 +22,8 @@ build/
 
 # Persistent data
 persistent/db/*.db
+persistent/db/*.db-shm
+persistent/db/*.db-wal
 persistent/db/backup/*.db
 persistent/sync/*.jsonl
 
