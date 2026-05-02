@@ -5,7 +5,6 @@ series URL filters, persistent sessions, background profile sync,
 and crontab PATH line preservation.
 """
 
-import json
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -16,7 +15,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.db.base import Base
-from app.db.models import Book, SyncConfig, SyncRun, User, UserSettings
+from app.db.models import SyncConfig, SyncRun, User, UserSettings
 
 
 def _make_factory():
