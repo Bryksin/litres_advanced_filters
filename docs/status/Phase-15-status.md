@@ -30,3 +30,12 @@
 - Last successful bulk sync: id=37 (2026-04-10), 100 pages delta
 - Stuck run id=39: started via admin panel, crashed with `sqlite3.OperationalError: database is locked`, has `finished_at` set but status still `running`
 - No bulk sync in 22 days
+
+## Deployment (2026-05-02)
+
+- **Migration:** Mac mini (`mbp`) → Proxmox LXC (id=103, host `proxmox`, container `litres`)
+- **Public URL:** https://litres.spidernest.duckdns.org/ (SSL via DuckDNS)
+- **Verified post-deploy:**
+  - Persistent session cookie sets `Expires=Sun, 02 May 2027` (365 days, working)
+  - Stuck sync run id=39 manually marked as `failed`
+  - New cron has PATH fix; first scheduled run: tonight 00:00 UTC

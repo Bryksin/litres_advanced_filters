@@ -75,7 +75,7 @@ def check_no_running_sync(session: Session) -> None:
                 "Auto-recovered stuck SyncRun id=%d: finished_at was set but status was still 'running'",
                 run.id,
             )
-        elif run.started_at and (now - run.started_at.replace(tzinfo=timezone.utc)).total_seconds() > timeout:
+        elif run.started_at and (now - run.started_at).total_seconds() > timeout:
             run.status = "failed"
             run.error_message = "Auto-recovered: sync exceeded 24h timeout"
             log.warning(
