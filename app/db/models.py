@@ -15,7 +15,6 @@ from sqlalchemy import (
     SmallInteger,
     String,
     Text,
-    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -176,7 +175,6 @@ class BookAuthor(Base):
 
     __tablename__ = "book_author"
     __table_args__ = (
-        UniqueConstraint("book_id", "person_id"),
         Index("ix_book_author_person_id", "person_id"),
     )
 
@@ -197,7 +195,6 @@ class BookNarrator(Base):
 
     __tablename__ = "book_narrator"
     __table_args__ = (
-        UniqueConstraint("book_id", "person_id"),
         Index("ix_book_narrator_person_id", "person_id"),
     )
 
