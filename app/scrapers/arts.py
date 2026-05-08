@@ -4,7 +4,7 @@ Phase 4: used by ingest_book() to get genres, series, and release_date for new b
 The catalog/facets API always returns series:[] and genres:[] — this endpoint fills those gaps.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.scrapers.catalog import parse_art
 from app.scrapers.client import RateLimitedClient
@@ -52,7 +52,9 @@ def fetch_arts_detail(client: RateLimitedClient, art_id: int) -> ArtDetail:
     rd_str = raw.get("last_released_at")
     if rd_str:
         try:
-            release_date = datetime.fromisoformat(rd_str)
+            parsed = datetime.fromisoformat(rd_str)
+            # LitRes returns naive ISO strings (e.g. "2026-01-23T09:46:57"); treat as UTC.
+            release_date = parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         except ValueError:
             pass
 

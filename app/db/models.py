@@ -8,7 +8,6 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
-    DateTime,
     Float,
     ForeignKey,
     Index,
@@ -20,7 +19,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, UTCDateTime
 
 
 # ---------------------------------------------------------------------------
@@ -79,8 +78,8 @@ class Book(Base):
         Boolean, nullable=False, default=False, index=True
     )
     is_abonement_art: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    release_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
-    cached_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    release_date: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, index=True)
+    cached_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
 
     book_genres: Mapped[list["BookGenre"]] = relationship("BookGenre", back_populates="book")
     book_authors: Mapped[list["BookAuthor"]] = relationship(
@@ -122,8 +121,8 @@ class SyncConfig(Base):
     art_type: Mapped[str] = mapped_column(String(32), nullable=False)
     language_code: Mapped[str] = mapped_column(String(8), nullable=False)
     only_subscription: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    last_bulk_sync_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    last_delta_sync_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_bulk_sync_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    last_delta_sync_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     sync_runs: Mapped[list["SyncRun"]] = relationship("SyncRun", back_populates="sync_config")
 
@@ -136,7 +135,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     litres_login: Mapped[str | None] = mapped_column(String(255), nullable=True)
     session_data: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
 
     ignored_books: Mapped[list["UserIgnoredBook"]] = relationship("UserIgnoredBook", back_populates="user")
     listened_books: Mapped[list["UserListenedBook"]] = relationship("UserListenedBook", back_populates="user")
@@ -163,7 +162,7 @@ class BookGenre(Base):
 
     book_id: Mapped[int] = mapped_column(Integer, ForeignKey("book.id"), primary_key=True)
     genre_id: Mapped[str] = mapped_column(String(32), ForeignKey("genre.id"), primary_key=True)
-    cached_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    cached_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
 
     book: Mapped["Book"] = relationship("Book", back_populates="book_genres")
     genre: Mapped["Genre"] = relationship("Genre", back_populates="book_genres")
@@ -244,8 +243,8 @@ class SyncRun(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     sync_config_id: Mapped[int] = mapped_column(Integer, ForeignKey("sync_config.id"), nullable=False)
     type: Mapped[str] = mapped_column(String(16), nullable=False)
-    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     pages_fetched: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     books_upserted: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
@@ -266,7 +265,7 @@ class UserIgnoredBook(Base):
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), primary_key=True)
     book_id: Mapped[int] = mapped_column(Integer, ForeignKey("book.id"), primary_key=True)
-    ignored_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    ignored_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="ignored_books")
     book: Mapped["Book"] = relationship("Book", back_populates="ignored_by")
@@ -279,7 +278,7 @@ class UserListenedBook(Base):
 
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id"), primary_key=True)
     book_id: Mapped[int] = mapped_column(Integer, ForeignKey("book.id"), primary_key=True)
-    listened_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    listened_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="listened_books")
     book: Mapped["Book"] = relationship("Book", back_populates="listened_by")
@@ -310,7 +309,7 @@ class UserSettings(Base):
     full_series_subscription: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     hide_listened: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     incomplete_series_only: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="settings")
     genre: Mapped["Genre | None"] = relationship("Genre", back_populates="user_settings")

@@ -9,7 +9,7 @@ Two-query approach:
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from sqlalchemy import case, func, literal
@@ -466,7 +466,7 @@ def _handle_f11_incomplete_series(session, base_q, query, user_id):
     filtered_groups = [g for g in all_groups if g.group_key in kept_series_ids]
 
     # Sort in Python
-    _min_date = datetime(1900, 1, 1)
+    _min_date = datetime(1900, 1, 1, tzinfo=timezone.utc)
     sort_key = query.sort
     if sort_key == "rating_avg_desc":
         filtered_groups.sort(

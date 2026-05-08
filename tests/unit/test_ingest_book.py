@@ -66,8 +66,7 @@ def test_ingest_book_new_creates_book_row(db_session):
     assert book.rating_avg == 4.5
     assert book.rating_count == 100
     assert book.is_available_with_subscription is True
-    # SQLite DateTime drops tzinfo on round-trip; compare naive UTC datetimes
-    assert book.release_date == datetime(2025, 10, 3)
+    assert book.release_date == datetime(2025, 10, 3, tzinfo=timezone.utc)
 
 
 def test_ingest_book_new_creates_persons_and_junctions(db_session):
