@@ -156,7 +156,7 @@
                 <label style="color:var(--sb-accent-dim); font-size:0.75rem;">Команда:</label>
                 <input type="text" class="admin-input js-cron-command"
                        value="{{ job.command }}"
-                       placeholder="cd /app && python -m app.sync bulk --max-pages 100 ..."
+                       placeholder="cd /app && /usr/local/bin/python -m app.sync bulk --max-pages 100 ..."
                        style="flex:1; min-width: 200px;">
                 <button type="button" class="admin-btn admin-btn--primary admin-btn--sm js-cron-save"
                         data-index="{{ loop.index0 }}">Сохранить</button>
