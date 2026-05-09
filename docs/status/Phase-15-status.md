@@ -39,3 +39,28 @@
   - Persistent session cookie sets `Expires=Sun, 02 May 2027` (365 days, working)
   - Stuck sync run id=39 manually marked as `failed`
   - New cron has PATH fix; first scheduled run: tonight 00:00 UTC
+
+## Follow-up correction (2026-05-09, PR #8)
+
+The 15.1 PATH fix did **not** stick on prod after redeploy. Investigation
+on 2026-05-09 found `/app/persistent/sync/cron.log` full of `python: not found`
+since 04-10 — last successful sync was 04-10 21:44.
+
+Root cause: the entrypoint loads `/app/persistent/crontab` if it exists, and
+that file was written by a pre-15.1 version of the admin panel (no `PATH=`
+header). The persistent volume preserved it across every deploy, so the
+fixed default `/app/crontab` was never used.
+
+Resolved by PR #8 with three layers of defence:
+
+1. Default crontab now invokes `/usr/local/bin/python` directly (absolute
+   path; no PATH dependency).
+2. Entrypoint heals stale persistent crontabs on every boot — injects `PATH=`
+   if missing and rewrites bare `python -m` to absolute path. Idempotent.
+3. `PATH=` line still kept in default and admin-write paths.
+
+Profile sync was also failing (HTTP 404 from LitRes refresh endpoint, then
+`LitresAuthError` because `LITRES_PASSWORD` is not set in the prod LXC env).
+Re-login fallback is the workaround until the LitRes API change is
+investigated; deployment story now requires `LITRES_EMAIL` + `LITRES_PASSWORD`
+to be forwarded into the container.
