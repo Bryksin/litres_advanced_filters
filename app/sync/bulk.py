@@ -24,6 +24,8 @@ from app.sync.common import (
     GENRE_ID,
     RETRY_WAITS,
     check_no_running_sync,
+    commit_with_retry,
+    finalise_sync_run,
     get_sync_config,
     log_failed_book,
     make_run_tag,
@@ -109,11 +111,18 @@ def run_bulk(
     series_count = 0
     failed_count = 0
 
+    # Final state tracked in locals so it survives even if the ingest session
+    # gets poisoned by an OperationalError mid-loop. The fresh-session
+    # finaliser in `finally` reads from these, not from the in-memory `run`.
+    final_status = "running"
+    final_error: str | None = None
+
     with SessionLocal() as session:
         check_no_running_sync(session)
         config = get_sync_config(session)
         sync_type = "delta" if max_pages is not None else "bulk"
         run = _open_sync_run(session, config, resume, sync_type=sync_type)
+        run_id = run.id
 
         # Resume from the page AFTER the last completed one.
         # last_page_fetched=None means never started → start from 0.
@@ -137,7 +146,7 @@ def run_bulk(
                                 max_hours,
                                 elapsed_hours,
                             )
-                            run.status = "interrupted"
+                            final_status = "interrupted"
                             break
 
                     # Fetch catalog page — retry up to 3 times on 5xx.
@@ -163,8 +172,8 @@ def run_bulk(
                                     "[page %d] LitRes %d after %d retries — interrupting sync",
                                     page_number, exc.response.status_code, len(_retry_waits),
                                 )
-                                run.status = "interrupted"
-                                run.error_message = (
+                                final_status = "interrupted"
+                                final_error = (
                                     f"LitRes {exc.response.status_code} at page {page_number} "
                                     f"({len(_retry_waits)} retries exhausted)"
                                 )
@@ -178,7 +187,7 @@ def run_bulk(
 
                     if not page.books:
                         log.info("[page %d] no books returned — end of catalog", page_number)
-                        run.status = "done"
+                        final_status = "done"
                         break
 
                     log.info("[page %d] %d books", page_number, len(page.books))
@@ -236,50 +245,54 @@ def run_bulk(
                         run.pages_fetched = page_number + 1
                         run.books_upserted = new_count + updated_count
                         run.series_fetched = series_count
-                        session.commit()
+                        commit_with_retry(session, context=f"bulk page {page_number}")
 
                     page_number += 1
 
                     # max_pages check
                     if max_pages is not None and page_number >= start_page + max_pages:
                         log.info("[page %d] max_pages=%d reached — stopping", page_number, max_pages)
-                        if run.status == "running":
-                            run.status = "done"
+                        if final_status == "running":
+                            final_status = "done"
                         break
 
                     if page.next_offset is None:
-                        run.status = "done"
+                        final_status = "done"
                         break
 
                     offset = page.next_offset
 
-                if run.status == "done" and not dry_run:
+                if final_status == "done" and not dry_run:
                     config.last_bulk_sync_at = datetime.now(timezone.utc)
+                    commit_with_retry(session, context="bulk last_bulk_sync_at")
 
         except KeyboardInterrupt:
-            run.status = "interrupted"
-            run.error_message = "Interrupted by user (Ctrl-C)"
+            final_status = "interrupted"
+            final_error = "Interrupted by user (Ctrl-C)"
             log.info("Interrupted by user")
         except Exception as exc:
-            run.status = "failed"
-            run.error_message = str(exc)
+            final_status = "failed"
+            final_error = str(exc)
             log.exception("Bulk sync failed")
             raise
         finally:
-            # If a prior commit failed (e.g. database-is-locked), the session
-            # is in a rolled-back state.  Roll back explicitly so we can write
-            # the final status; we re-read the SyncRun to avoid stale state.
-            if session.is_active and session.in_nested_transaction():
-                session.rollback()
-            if not session.is_active:
-                session.rollback()
-                run = session.get(SyncRun, run.id)
-            run.finished_at = datetime.now(timezone.utc)
-            run.books_new = new_count
-            run.books_updated = updated_count
-            run.books_failed = failed_count
-            session.commit()
-            final_status = run.status  # capture before session closes
+            # Write terminal state in a brand-new session, fully decoupled from
+            # the ingest session. If the ingest session is poisoned by a lock
+            # error, the cleanup must still succeed.
+            try:
+                finalise_sync_run(
+                    run_id,
+                    status=final_status,
+                    error_message=final_error,
+                    extra={
+                        "books_new": new_count,
+                        "books_updated": updated_count,
+                        "books_failed": failed_count,
+                    },
+                )
+            except Exception:
+                # Last-ditch — log but don't shadow the original exception.
+                log.exception("finalise_sync_run failed for id=%d", run_id)
 
     elapsed = time.monotonic() - start_time
     summary = (

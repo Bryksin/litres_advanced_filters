@@ -43,6 +43,8 @@ RUN apt-get update && apt-get install -y \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get update \
     && apt-get install -y nodejs \
+    && node --version \
+    && npm --version \
     && rm -rf /var/lib/apt/lists/* \
     && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list \
@@ -91,8 +93,9 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 # Install Playwright browsers for appuser (used by npx playwright / CLI)
 RUN npx --yes playwright install
 
-# Install skills CLI for appuser only (binary lands in ~/.local/bin, already in PATH)
-RUN npm install -g skills
+# Install skills CLI for appuser only (force npm global prefix to ~/.local)
+RUN npm config set prefix /home/appuser/.local \
+    && npm install -g skills
 
 # Runtime PATH
 ENV PATH="/home/appuser/${WORKSPACE_NAME}/.venv/bin:/home/appuser/.local/bin:${PATH}"

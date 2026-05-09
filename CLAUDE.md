@@ -96,6 +96,12 @@ When adding columns or tables: edit `app/db/models.py`, run `alembic revision --
 - **Never commit directly to master.** All changes go through feature branches + PRs.
 - Branch naming: `feat/short-description`, `fix/short-description`, `docs/short-description`
 - PRs are **squash-merged** to keep master history clean (one commit per feature/fix).
+- **Bundle all docs into the same PR as the code fix.** Every merge to master triggers
+  a Docker image rebuild and patch version bump (publish.yml has no path filter), so a
+  separate docs-only PR causes a wasted version bump. Before opening a PR, sweep for
+  required updates: `docs/status/Phase-N-status.md`, `docs/Current Development State.md`,
+  README, CLAUDE.md, and memory files. Verify the working tree is clean of related
+  uncommitted changes before requesting merge.
 - CI must pass before merging.
 - After merge, delete the feature branch.
 

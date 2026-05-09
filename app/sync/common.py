@@ -3,9 +3,14 @@
 import json
 import logging
 import os
+import random
+import time
 import traceback
 from datetime import datetime, timezone
+from typing import Any
 
+from sqlalchemy import update
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from app.db.models import Genre, SyncConfig, SyncRun
@@ -17,6 +22,75 @@ GENRE_ID = 201583
 GENRE_SLUG = "legkoe-chtenie"
 DEFAULT_LIMIT = 24
 RETRY_WAITS = [60, 300, 600]
+
+# Strings that mark a transient SQLite write-lock contention. WAL mode allows
+# one writer; under contention SQLAlchemy raises OperationalError with one of
+# these messages. Retrying with backoff almost always succeeds.
+_LOCK_ERROR_MARKERS = ("database is locked", "database table is locked")
+COMMIT_RETRY_ATTEMPTS = 5
+COMMIT_RETRY_BASE_DELAY = 0.1
+
+
+def _is_lock_error(exc: OperationalError) -> bool:
+    msg = str(exc).lower()
+    return any(marker in msg for marker in _LOCK_ERROR_MARKERS)
+
+
+def commit_with_retry(
+    session: Session,
+    *,
+    attempts: int = COMMIT_RETRY_ATTEMPTS,
+    base_delay: float = COMMIT_RETRY_BASE_DELAY,
+    context: str = "",
+) -> None:
+    """Commit ``session`` with bounded retry on SQLite write-lock contention.
+
+    Even with ``PRAGMA busy_timeout=30000`` set, SQLite raises
+    ``database is locked`` immediately when two connections that already hold
+    read transactions both try to upgrade to write (``SQLITE_BUSY_SNAPSHOT``).
+    The busy_handler does not cover that case, so a long-running sync sharing
+    the DB with gunicorn workers can crash on a single contended commit.
+
+    Retries only on lock errors; any other ``OperationalError`` (or other
+    exception class) is re-raised on the first attempt.
+
+    The caller is responsible for ensuring the session's pending state is
+    re-buildable across retries — for per-page bulk sync commits this holds
+    because each iteration's writes are self-contained.
+    """
+    last_exc: OperationalError | None = None
+    for i in range(attempts):
+        try:
+            session.commit()
+            if i > 0:
+                log.info(
+                    "commit_with_retry%s: succeeded after %d retries",
+                    f" [{context}]" if context else "",
+                    i,
+                )
+            return
+        except OperationalError as exc:
+            if not _is_lock_error(exc):
+                raise
+            last_exc = exc
+            session.rollback()
+            if i == attempts - 1:
+                break
+            delay = base_delay * (2 ** i) + random.random() * base_delay
+            log.warning(
+                "commit_with_retry%s: locked, retry %d/%d in %.2fs",
+                f" [{context}]" if context else "",
+                i + 1,
+                attempts,
+                delay,
+            )
+            time.sleep(delay)
+    log.error(
+        "commit_with_retry%s: giving up after %d attempts",
+        f" [{context}]" if context else "",
+        attempts,
+    )
+    raise last_exc  # type: ignore[misc]
 
 
 def make_run_tag() -> str:
@@ -60,10 +134,19 @@ def get_sync_config(session: Session) -> SyncConfig:
     return config
 
 
-def check_no_running_sync(session: Session) -> None:
+def reap_zombie_sync_runs(session: Session, *, timeout_seconds: int = 24 * 3600) -> int:
+    """Mark crashed-but-still-'running' sync_run rows as failed.
+
+    A row is considered a zombie if either:
+      - ``finished_at`` is populated (process set it but never updated status), or
+      - ``started_at`` is older than ``timeout_seconds`` (process is gone).
+
+    Idempotent and safe to call from multiple entry points (app startup,
+    pre-sync check). Returns the number of rows reaped.
+    """
     running_rows = session.query(SyncRun).filter_by(status="running").all()
     now = datetime.now(timezone.utc)
-    timeout = 24 * 3600  # 24 hours in seconds
+    reaped = 0
 
     for run in running_rows:
         if run.finished_at is not None:
@@ -72,19 +155,28 @@ def check_no_running_sync(session: Session) -> None:
                 "Auto-recovered: process crashed after setting finished_at"
             )
             log.warning(
-                "Auto-recovered stuck SyncRun id=%d: finished_at was set but status was still 'running'",
+                "Reaped zombie SyncRun id=%d: finished_at was set but status was still 'running'",
                 run.id,
             )
-        elif run.started_at and (now - run.started_at).total_seconds() > timeout:
+            reaped += 1
+        elif run.started_at and (now - run.started_at).total_seconds() > timeout_seconds:
             run.status = "failed"
-            run.error_message = "Auto-recovered: sync exceeded 24h timeout"
+            run.error_message = f"Auto-recovered: sync exceeded {timeout_seconds // 3600}h timeout"
             log.warning(
-                "Auto-recovered stuck SyncRun id=%d: started_at=%s exceeded 24h timeout",
+                "Reaped zombie SyncRun id=%d: started_at=%s exceeded %dh timeout",
                 run.id,
                 run.started_at,
+                timeout_seconds // 3600,
             )
+            reaped += 1
 
-    session.commit()
+    if reaped:
+        session.commit()
+    return reaped
+
+
+def check_no_running_sync(session: Session) -> None:
+    reap_zombie_sync_runs(session)
 
     still_running = session.query(SyncRun).filter_by(status="running").first()
     if still_running:
@@ -92,6 +184,41 @@ def check_no_running_sync(session: Session) -> None:
             f"Sync already running: SyncRun id={still_running.id} started at {still_running.started_at}. "
             "If the process crashed, manually update its status to 'failed' to unblock."
         )
+
+
+def finalise_sync_run(
+    run_id: int,
+    *,
+    status: str,
+    error_message: str | None = None,
+    extra: dict[str, Any] | None = None,
+) -> None:
+    """Write the terminal state of a sync_run in a brand-new session.
+
+    Decoupled from the ingest session so a poisoned in-flight transaction
+    cannot prevent the cleanup. Called from ``run_bulk``'s finally block.
+    """
+    from app.db import SessionLocal  # local import to avoid circular deps
+
+    values: dict[str, Any] = {
+        "status": status,
+        "finished_at": datetime.now(timezone.utc),
+        "error_message": error_message,
+    }
+    if extra:
+        values.update(extra)
+
+    with SessionLocal() as s:
+        commit_with_retry(
+            _bind_update(s, run_id, values),
+            context=f"finalise_sync_run id={run_id}",
+        )
+
+
+def _bind_update(session: Session, run_id: int, values: dict[str, Any]) -> Session:
+    """Stage an UPDATE on sync_run; commit happens via commit_with_retry."""
+    session.execute(update(SyncRun).where(SyncRun.id == run_id).values(**values))
+    return session
 
 
 def failed_books_path(sync_dir: str, run_tag: str) -> str:

@@ -48,18 +48,21 @@ else
 fi
 
 # =============================================================================
-# Update npm to latest
+# Verify npm health (npm is managed at image build time)
 # =============================================================================
 
-echo "Updating npm"
-sudo npm install -g npm@latest
+echo "Verifying npm installation"
+command -v npm >/dev/null 2>&1
+npm --version >/dev/null 2>&1
 
 # =============================================================================
-# Update Claude Code to latest
+# Update Claude Code to latest (official installer)
 # =============================================================================
 
 echo "Updating Claude Code"
-sudo npm install -g @anthropic-ai/claude-code@latest
+curl -fsSL https://claude.ai/install.sh | bash
+command -v claude >/dev/null 2>&1
+claude --version >/dev/null 2>&1
 
 # =============================================================================
 # Install Python dependencies
