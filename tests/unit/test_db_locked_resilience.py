@@ -335,9 +335,10 @@ class TestBulkCrashFinalisation:
         factory = _make_factory()
         _seed_sync_config(factory)
 
-        # Mock fetch_catalog_page to return one page with no books
-        # (so the loop is a no-op except for the page commit).
-        page_stub = MagicMock(books=[], next_offset=None)
+        # One page with one (known) book, so the loop reaches the per-page
+        # commit. (An empty page is no longer "end of catalog" at offset 0
+        # (S9), and a --max-pages run no longer stamps last_bulk_sync_at (S16).)
+        page_stub = MagicMock(books=[MagicMock(id=1, title="t")], next_offset=None, total_count=1)
 
         # Force the per-page commit to fail with a lock error after retries.
         def commit_with_retry_stub(session, **kwargs):
@@ -350,14 +351,14 @@ class TestBulkCrashFinalisation:
             patch("app.db.SessionLocal", factory),
             patch("app.sync.bulk.fetch_catalog_page", return_value=page_stub),
             patch("app.sync.bulk.RateLimitedClient") as mock_client,
+            patch("app.sync.bulk.ingest_book", return_value=(False, None)),
             patch("app.config.config.Config.SYNC_DIR", str(tmp_path)),
-            # Make the empty-page branch trigger a commit-with-retry to hit our stub.
+            # The per-page commit goes through commit_with_retry and hits our stub.
             patch("app.sync.bulk.commit_with_retry", side_effect=commit_with_retry_stub),
         ):
             mock_client.return_value.__enter__ = lambda self: MagicMock()
             mock_client.return_value.__exit__ = lambda *a: None
-            # An empty page sets final_status='done' before the post-loop commit.
-            # The post-loop commit_with_retry then raises → caught by except Exception
+            # The per-page commit_with_retry raises → caught by except Exception
             # → final_status='failed' → finalise_sync_run writes 'failed'.
             with pytest.raises(OperationalError):
                 bulk.run_bulk(max_pages=1)

@@ -5,6 +5,7 @@ series URL filters, persistent sessions, background profile sync,
 and crontab PATH line preservation.
 """
 
+import json
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -309,7 +310,11 @@ class TestCrontabPath:
         """Admin cron update should write PATH line in the output file."""
         factory = _make_factory()
         _seed_sync_config(factory)
-        _seed_user(factory, litres_login="admin@test.com")
+        _seed_user(factory, litres_login="admin@test.com", session_data=json.dumps({
+            "email": "admin@test.com", "access_token": "a", "refresh_token": "r",
+            "expires_at": "2099-01-01T00:00:00+00:00",
+            "profile_synced_at": "2099-01-01T00:00:00+00:00",
+        }))
 
         from app.start import create_app
         app = create_app()

@@ -105,6 +105,14 @@ def _parse_subgenres(html: str, parent_url: str, seen_ids: set[str]) -> list[Gen
     """
     Parse sub-genres from a genre/showroom page HTML.
 
+    ``seen_ids`` holds ids that must never become children here: the roots,
+    the page's own genre and its same-root siblings (guards against a block
+    of sibling or breadcrumb links). A genre that already sits elsewhere —
+    including a level-2 genre of ANOTHER root, e.g. "Исторические
+    приключения" (level 2 under История, listed on the Приключения page) —
+    is NOT excluded: LitRes genres form a DAG (S2), and each parent page that
+    lists it contributes an edge. Cycles are dropped by the genre sync.
+
     LitRes genre pages list their sub-genres in a sidebar block structured as:
       <div> (container)
         <div> <a href="/genre/child-slug-id/">Child Name123 книги</a> </div>
@@ -158,12 +166,13 @@ def _parse_subgenres(html: str, parent_url: str, seen_ids: set[str]) -> list[Gen
         if len(unique_hrefs) < 2:
             continue
 
-        # Found the sub-genre block — build nodes, skip already-known ids
+        # Found the sub-genre block — build nodes, skip excluded and duplicate ids
         nodes: list[GenreNode] = []
+        block_ids: set[str] = set()
         for href, name, id_, slug, count in child_links:
-            if id_ in seen_ids:
+            if id_ in seen_ids or id_ in block_ids:
                 continue
-            seen_ids.add(id_)
+            block_ids.add(id_)
             nodes.append(
                 GenreNode(id=id_, name=name, slug=slug, url=href, count=count, children=[])
             )
@@ -223,7 +232,7 @@ def fetch_genre_tree_hierarchical(client: RateLimitedClient) -> list[GenreNode]:
     soup = BeautifulSoup(html, "html.parser")
 
     roots: list[GenreNode] = []
-    seen_ids: set[str] = set()
+    root_ids: set[str] = set()
 
     for section in soup.find_all("div"):
         # Section pattern: exactly 1 direct <a> + 1 direct <div>
@@ -240,7 +249,7 @@ def fetch_genre_tree_hierarchical(client: RateLimitedClient) -> list[GenreNode]:
             continue
 
         root_slug, root_id = root_parsed
-        if root_id in seen_ids:
+        if root_id in root_ids:
             continue
 
         root_name, root_count = _parse_name_count(root_a.get_text())
@@ -259,18 +268,17 @@ def fetch_genre_tree_hierarchical(client: RateLimitedClient) -> list[GenreNode]:
             if not parsed:
                 continue
             slug, id_ = parsed
-            if id_ in seen_ids:
+            if id_ in root_ids or id_ == root_id:
                 continue
             name, count = _parse_name_count(a.get_text())
             if not name:
                 name = slug
             child_seen.add(href)
-            seen_ids.add(id_)
             children.append(
                 GenreNode(id=id_, name=name, slug=slug, url=href, count=count, children=[])
             )
 
-        seen_ids.add(root_id)
+        root_ids.add(root_id)
         roots.append(
             GenreNode(
                 id=root_id,
@@ -279,24 +287,41 @@ def fetch_genre_tree_hierarchical(client: RateLimitedClient) -> list[GenreNode]:
                 url=root_href,
                 count=root_count,
                 children=children,
+                children_complete=True,
             )
         )
 
-    # Level-3: fetch each level-2 genre page to collect grandchildren
-    total_l2 = sum(len(r.children) for r in roots)
+    # Never a child of a level-2 genre: a root, the genre itself, or one of its
+    # same-root siblings (sibling links, not sub-genres). Level-2 genres of
+    # other roots are allowed (S2: "Исторические приключения" under Приключения).
+    def _excluded(root: GenreNode, child: GenreNode) -> set[str]:
+        return root_ids | {c.id for c in root.children} | {child.id}
+
+    # Level-3: fetch each level-2 genre page once (a level-2 genre listed under
+    # several roots shares the same children) to collect grandchildren.
+    level2_ids = list(dict.fromkeys(c.id for r in roots for c in r.children))
+    total_l2 = len(level2_ids)
     log.info("Fetching level-3 sub-genres for %d level-2 genres...", total_l2)
 
     fetched = 0
     failed_subtrees: list[str] = []
+    children_by_id: dict[str, list[GenreNode] | None] = {}
     for root in roots:
         for child in root.children:
-            fetched += 1
-            log.info("[%d/%d] %s", fetched, total_l2, child.name)
-            page_html = _fetch_subgenre_page(client, child.url, child.name)
-            if page_html is not None:
-                child.children = _parse_subgenres(page_html, child.url, seen_ids)
-            else:
-                failed_subtrees.append(f"{child.name} ({child.url})")
+            if child.id not in children_by_id:
+                fetched += 1
+                log.info("[%d/%d] %s", fetched, total_l2, child.name)
+                page_html = _fetch_subgenre_page(client, child.url, child.name)
+                if page_html is not None:
+                    children_by_id[child.id] = _parse_subgenres(
+                        page_html, child.url, _excluded(root, child)
+                    )
+                else:
+                    children_by_id[child.id] = None
+                    failed_subtrees.append(f"{child.name} ({child.url})")
+            sub = children_by_id[child.id]
+            child.children = list(sub) if sub is not None else []
+            child.children_complete = sub is not None
 
     if failed_subtrees:
         log.error(

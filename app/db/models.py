@@ -15,6 +15,8 @@ from sqlalchemy import (
     SmallInteger,
     String,
     Text,
+    select,
+    union,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,7 +29,15 @@ from app.db.base import Base, UTCDateTime
 
 
 class Genre(Base):
-    """LitRes genre tree node. Self-referential (parent_id → id)."""
+    """LitRes genre node.
+
+    LitRes genres form a DAG: one genre can sit under several parents (e.g.
+    "Исторические приключения" under both История and Приключения).
+    ``parent_id`` keeps the primary parent (first seen); every parent edge,
+    including the primary one, is stored in ``genre_parent``. The ``children``
+    and ``parents`` relationships (defined below the class) read the union of
+    both, so rows that only set ``parent_id`` still form a valid tree.
+    """
 
     __tablename__ = "genre"
 
@@ -40,10 +50,50 @@ class Genre(Base):
     url: Mapped[str] = mapped_column(String(512), nullable=False)
     count: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    parent: Mapped["Genre | None"] = relationship("Genre", remote_side="Genre.id", back_populates="children")
-    children: Mapped[list["Genre"]] = relationship("Genre", back_populates="parent")
+    parent: Mapped["Genre | None"] = relationship("Genre", remote_side="Genre.id")
     book_genres: Mapped[list["BookGenre"]] = relationship("BookGenre", back_populates="genre")
     user_settings: Mapped[list["UserSettings"]] = relationship("UserSettings", back_populates="genre")
+
+
+class GenreParent(Base):
+    """Genre → parent edge. A genre may have several parents (see Genre)."""
+
+    __tablename__ = "genre_parent"
+    __table_args__ = (
+        Index("ix_genre_parent_parent_id", "parent_id"),
+    )
+
+    genre_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("genre.id", ondelete="CASCADE"), primary_key=True
+    )
+    parent_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("genre.id", ondelete="CASCADE"), primary_key=True
+    )
+
+
+# All parent edges: the primary ``genre.parent_id`` plus every ``genre_parent`` row.
+_genre_t = Genre.__table__
+_genre_edges = union(
+    select(_genre_t.c.id.label("genre_id"), _genre_t.c.parent_id.label("parent_id"))
+    .where(_genre_t.c.parent_id.isnot(None)),
+    select(GenreParent.genre_id.label("genre_id"), GenreParent.parent_id.label("parent_id")),
+).subquery("genre_edges")
+
+Genre.children = relationship(
+    Genre,
+    secondary=_genre_edges,
+    primaryjoin=_genre_t.c.id == _genre_edges.c.parent_id,
+    secondaryjoin=_genre_t.c.id == _genre_edges.c.genre_id,
+    viewonly=True,
+    order_by=_genre_t.c.name,
+)
+Genre.parents = relationship(
+    Genre,
+    secondary=_genre_edges,
+    primaryjoin=_genre_t.c.id == _genre_edges.c.genre_id,
+    secondaryjoin=_genre_t.c.id == _genre_edges.c.parent_id,
+    viewonly=True,
+)
 
 
 class Person(Base):
@@ -100,6 +150,10 @@ class Series(Base):
     slug: Mapped[str | None] = mapped_column(String(255), nullable=True)
     url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     book_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # When the roster (series HTML page) was last read completely. NULL = never,
+    # or the last attempt failed (e.g. WAF 403): the nightly roster refresh
+    # picks NULL rows first, then the oldest.
+    roster_synced_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     book_series_rows: Mapped[list["BookSeries"]] = relationship("BookSeries", back_populates="series")
 
@@ -250,6 +304,9 @@ class SyncRun(Base):
     books_updated: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     books_failed: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     last_page_fetched: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Bumped on every committed page; lets the reaper tell a live run from one
+    # whose process died (container restart, killed gunicorn worker).
+    heartbeat_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     sync_config: Mapped["SyncConfig"] = relationship("SyncConfig", back_populates="sync_runs")
@@ -306,6 +363,8 @@ class UserSettings(Base):
     full_series_subscription: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     hide_listened: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     incomplete_series_only: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # Catalog sort order (release_date_desc | rating_avg_desc | rating_count_desc); NULL = default.
+    sort: Mapped[str | None] = mapped_column(String(32), nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="settings")

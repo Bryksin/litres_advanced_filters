@@ -105,11 +105,6 @@ def parse_series_page(
             if not block:
                 break
             block_text = block.get_text(" ", strip=True)
-            if "Сергей" in block_text or "Лукьяненко" in block_text:
-                for auth_a in block.find_all("a", href=re.compile(r"^/author/")):
-                    name = auth_a.get_text(strip=True)
-                    if name and name not in authors:
-                        authors.append(name)
             for rm in RATING_PATTERN.finditer(block_text):
                 rating_avg = _normalize_rating(rm.group(1))
                 try:
@@ -156,19 +151,62 @@ def parse_series_page(
     )
 
 
+# LitRes series pages list 24 books; a shorter page is the last one.
+SERIES_PAGE_SIZE = 24
+# Hard stop for roster pagination (30 pages -> 720 books).
+SERIES_MAX_PAGES = 30
+
+
+def _with_query(path_or_url: str, **params: object) -> str:
+    query = "&".join(f"{k}={v}" for k, v in params.items())
+    sep = "&" if "?" in path_or_url else "?"
+    return f"{path_or_url}{sep}{query}"
+
+
 def fetch_series_page(
     client: RateLimitedClient,
     path_or_url: str,
     *,
     art_types: str = "audiobook",
     languages: str = "ru",
+    max_pages: int = SERIES_MAX_PAGES,
 ) -> SeriesPage | None:
     """
-    Fetch series page HTML and parse. path_or_url: e.g. /series/slug-789982/ or full URL.
-    art_types and languages are query params for filtering (no subscription filter — intentional,
+    Fetch a series roster (all pages) and parse it.
+
+    path_or_url: e.g. /series/slug-789982/ or full URL. art_types and languages
+    are query params for filtering (no subscription filter — intentional,
     required to ingest all series members for F-10 correctness).
+
+    LitRes shows 24 books per page and links further pages as ``?page=N``.
+    Pages are followed until one adds no new art id, returns fewer than a full
+    page, or ``max_pages`` is reached. Positions continue across pages (they
+    are page order, not LitRes ``art_order``).
+
+    Raises ValueError for an empty URL (it would fetch the LitRes home page)
+    and httpx.HTTPStatusError on 4xx/5xx.
     """
-    sep = "&" if "?" in path_or_url else "?"
-    path_or_url = f"{path_or_url}{sep}art_types={art_types}&languages={languages}"
-    html = client.get_html(path_or_url)
-    return parse_series_page(html, series_url=path_or_url)
+    if not path_or_url or not path_or_url.strip("/"):
+        raise ValueError("series URL is empty")
+    first_url = _with_query(path_or_url, art_types=art_types, languages=languages)
+    html = client.get_html(first_url)
+    result = parse_series_page(html, series_url=first_url)
+    if result is None:
+        return None
+
+    seen = {b.art_id for b in result.books}
+    page_no = 1
+    last_count = len(result.books)
+    while last_count >= SERIES_PAGE_SIZE and page_no < max_pages:
+        page_no += 1
+        page_html = client.get_html(_with_query(first_url, page=page_no))
+        page = parse_series_page(page_html, series_url=first_url)
+        new_books = [b for b in (page.books if page else []) if b.art_id not in seen]
+        if not new_books:
+            break
+        for b in new_books:
+            seen.add(b.art_id)
+            b.position = len(result.books) + 1
+            result.books.append(b)
+        last_count = len(page.books)
+    return result

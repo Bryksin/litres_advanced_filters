@@ -51,8 +51,26 @@ def _seed_sync_config(factory):
         s.commit()
 
 
-def _seed_user(factory, *, user_id=1, litres_login=None, session_data=None):
-    """Insert a user + settings into the test DB."""
+_UNSET = object()
+
+
+def _active_session_data(email: str) -> str:
+    """session_data of a live LitRes session (admin requires an active one)."""
+    return json.dumps({
+        "email": email,
+        "access_token": "jwt",
+        "refresh_token": "rt",
+        "expires_at": "2099-01-01T00:00:00+00:00",
+    })
+
+
+def _seed_user(factory, *, user_id=1, litres_login=None, session_data=_UNSET):
+    """Insert a user + settings into the test DB.
+
+    By default a user with `litres_login` gets an active LitRes session for it.
+    """
+    if session_data is _UNSET:
+        session_data = _active_session_data(litres_login) if litres_login else None
     with factory() as s:
         s.add(
             User(
@@ -164,6 +182,33 @@ class TestAdminAuth:
         _seed_user(Factory, user_id=3, litres_login=_NON_ADMIN_EMAIL)
         client = _admin_client(app, user_id=3)
         resp = client.get("/admin/")
+        assert resp.status_code == 403
+
+    def test_admin_403_when_session_expired(self, admin_env):
+        """Admin email but an EXPIRED LitRes session -> 403 (audit W5)."""
+        app, Factory, _ = admin_env
+        _seed_user(
+            Factory, user_id=4, litres_login=_ADMIN_EMAIL,
+            session_data=json.dumps({"email": _ADMIN_EMAIL, "auth_state": "expired"}),
+        )
+        resp = _admin_client(app, user_id=4).get("/admin/")
+        assert resp.status_code == 403
+
+    def test_admin_403_with_litres_login_only(self, admin_env):
+        """A bare litres_login (no session tokens) grants nothing (audit W5)."""
+        app, Factory, _ = admin_env
+        _seed_user(Factory, user_id=5, litres_login=_ADMIN_EMAIL, session_data=None)
+        resp = _admin_client(app, user_id=5).get("/admin/")
+        assert resp.status_code == 403
+
+    def test_admin_403_when_tokens_belong_to_other_email(self, admin_env):
+        """litres_login is the admin, but the live tokens are another account's."""
+        app, Factory, _ = admin_env
+        _seed_user(
+            Factory, user_id=6, litres_login=_ADMIN_EMAIL,
+            session_data=_active_session_data(_NON_ADMIN_EMAIL),
+        )
+        resp = _admin_client(app, user_id=6).get("/admin/")
         assert resp.status_code == 403
 
     def test_admin_accessible_with_admin_email(self, admin_env):

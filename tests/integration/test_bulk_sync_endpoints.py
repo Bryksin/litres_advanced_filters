@@ -8,6 +8,8 @@ Or together with bulk sync tests:
     pytest tests/integration/ -v -s -m integration
 """
 
+import json
+
 import pytest
 from datetime import datetime, timezone
 from unittest.mock import patch
@@ -26,7 +28,21 @@ _ADMIN_EMAILS = {_ADMIN_EMAIL}
 def _seed_admin_user(factory):
     """Create an admin user (id=1) with litres_login in the test DB."""
     with factory() as s:
-        s.add(User(id=1, litres_login=_ADMIN_EMAIL, created_at=datetime.now(timezone.utc)))
+        # Admin needs an ACTIVE LitRes session (audit W5); a fresh
+        # profile_synced_at stops the middleware starting a background sync.
+        session_data = json.dumps({
+            "email": _ADMIN_EMAIL,
+            "access_token": "a",
+            "refresh_token": "r",
+            "expires_at": "2099-01-01T00:00:00+00:00",
+            "profile_synced_at": "2099-01-01T00:00:00+00:00",
+        })
+        s.add(User(
+            id=1,
+            litres_login=_ADMIN_EMAIL,
+            session_data=session_data,
+            created_at=datetime.now(timezone.utc),
+        ))
         s.add(UserSettings(user_id=1))
         s.commit()
 

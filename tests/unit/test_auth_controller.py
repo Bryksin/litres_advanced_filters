@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db.base import Base
 from app.db.models import User, UserListenedBook, UserSettings, Book
-from app.scrapers.auth import LitresAuthError
+from app.scrapers.auth import LitresAuthRejectedError
 
 
 @pytest.fixture
@@ -82,7 +82,8 @@ class TestLoginEndpoint:
     @patch("app.controllers.auth.get_valid_token")
     def test_login_wrong_credentials(self, mock_token, auth_app):
         app, Factory = auth_app
-        mock_token.side_effect = LitresAuthError("wrong password")
+        # litres_login raises the "rejected" subclass for HTTP 401
+        mock_token.side_effect = LitresAuthRejectedError("wrong password", status_code=401)
 
         with app.test_client() as client:
             client.get("/_set_session")
@@ -94,7 +95,7 @@ class TestLoginEndpoint:
 
         assert resp.status_code == 401
         assert data["ok"] is False
-        assert "error" in data
+        assert data["error"] == "Неверный email или пароль"
 
     def test_login_missing_fields(self, auth_app):
         app, _ = auth_app

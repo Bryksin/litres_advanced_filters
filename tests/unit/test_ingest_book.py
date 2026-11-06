@@ -136,31 +136,45 @@ def test_ingest_book_skips_nameless_genre(db_session):
     assert db_session.query(BookGenre).filter_by(book_id=104).count() == 0
 
 
-def test_ingest_book_known_updates_rating_only(db_session):
-    """Known book: only rating_avg and rating_count updated; no new rows created."""
+def test_ingest_book_known_refreshes_card_fields(db_session):
+    """Known book (S3): rating, subscription flags, title, cover and cached_at
+    follow the fresh sighting; no arts call, no new rows."""
     from app.sync.ingest import ingest_book
 
-    # Pre-insert book
+    old_ts = datetime(2026, 1, 1, tzinfo=timezone.utc)
     db_session.add(Book(
         id=104, title="Old Title", url="/audiobook/old/",
         art_type=1, rating_avg=3.0, rating_count=10,
-        is_available_with_subscription=True, is_abonement_art=False,
-        cached_at=datetime.now(timezone.utc),
+        is_available_with_subscription=False, is_abonement_art=False,
+        cached_at=old_ts,
     ))
     db_session.flush()
 
     art = _make_art(art_id=104, title="New Title")
     art.rating.rated_avg = 4.9
     art.rating.rated_total_count = 999
+    art.is_available_with_subscription = True
+    art.is_abonement_art = True
 
-    is_new, detail = ingest_book(db_session, client=MagicMock(), art=art, arts_detail=None)
+    client = MagicMock()
+    is_new, detail = ingest_book(db_session, client=client, art=art, arts_detail=None)
 
     assert is_new is False
     assert detail is None
+    client.get_api.assert_not_called()
     book = db_session.get(Book, 104)
-    assert book.title == "Old Title"   # title NOT updated
-    assert book.rating_avg == 4.9     # rating updated
+    assert book.title == "New Title"
+    assert book.rating_avg == 4.9
     assert book.rating_count == 999
+    assert book.is_available_with_subscription is True   # joined subscription
+    assert book.is_abonement_art is True
+    assert book.cached_at > old_ts
+    assert db_session.query(BookGenre).filter_by(book_id=104).count() == 0
+
+    # ...and back: a book that left the subscription is cleared on next sighting.
+    art.is_available_with_subscription = False
+    ingest_book(db_session, client=client, art=art, arts_detail=None)
+    assert db_session.get(Book, 104).is_available_with_subscription is False
 
 
 def test_ingest_book_dry_run_new_no_db_write(db_session):

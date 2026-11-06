@@ -19,7 +19,6 @@
             src="{{ item.cover_url or url_for('static', filename='img/cover-placeholder.svg') }}"
             alt="{{ item.title }}"
             loading="lazy"
-            onerror="this.onerror=null;this.src='{{ url_for('static', filename='img/cover-placeholder.svg') }}';"
           >
         </a>
         {% if item.type == 'series' %}
@@ -45,7 +44,7 @@
         <div class="book-card__footer">
           <div class="book-card__rating">
             <span class="book-card__stars" aria-hidden="true">&#9733;</span>
-            <span class="book-card__rating-value">{{ "%.1f"|format(item.rating_avg) if item.rating_avg else "—" }}</span>
+            <span class="book-card__rating-value">{{ "%.1f"|format(item.rating_avg) if item.rating_avg is not none else "—" }}</span>
             <span class="book-card__rating-count">({{ item.rating_count }})</span>
           </div>
           {% if item.type == 'book' %}
@@ -70,6 +69,13 @@
       {% if not selected_genre_id or selected_genre_id == '' %}
       <div class="empty-state__icon" aria-hidden="true">&#128218;</div>
       <p class="empty-state__text">Выберите жанр в боковой панели для начала поиска.</p>
+      {% elif total_count is defined and total_count > 0 %}
+      {# A page past the end (old bookmark, or filters shrank the results) #}
+      {% set first_args = request.args.to_dict() %}
+      {% set _ = first_args.pop('page', None) %}
+      <div class="empty-state__icon" aria-hidden="true">&#128214;</div>
+      <p class="empty-state__text">На странице {{ current_page }} ничего нет: результаты закончились раньше.</p>
+      <a href="{{ url_for('catalog.index', **first_args) }}" class="empty-state__action">На первую страницу</a>
       {% elif total_count is defined and total_count == 0 %}
       <div class="empty-state__icon" aria-hidden="true">&#128269;</div>
       <p class="empty-state__text">Ничего не найдено. Попробуйте ослабить фильтры.</p>

@@ -19,6 +19,8 @@ docs/LitRes API Reverse Engineering.md §2.5b):
 session_data keys:
 - email, access_token, refresh_token, expires_at, sid — current LitRes session
 - profile_synced_at — last successful profile sync for this user (ISO, UTC)
+- profile_sync_claimed_at — server-side throttle: a profile sync was started
+  at this time (cleared on success); see app.sync.profile.claim_profile_sync
 - auth_state="expired" — set by expire_litres_session(): tokens dropped, but
   email, profile_synced_at and the cached listened books are kept.
 - auth_expired_notice — one-shot flag next to auth_state="expired"; the web
@@ -42,14 +44,16 @@ AUTH_REFRESH_PATH = "/foundation/api/auth/refresh"
 # Consider token expired 60s before actual expiry to avoid edge cases
 TOKEN_EXPIRY_BUFFER_SECONDS = 60
 
-# Network timeouts (seconds). Refresh may run inside a page request, keep it short.
-LOGIN_TIMEOUT_SECONDS = 30.0
+# Network timeouts (seconds). Login and refresh may run inside a page request
+# (a gunicorn sync worker, 30 s default timeout), keep them short (audit W7).
+LOGIN_TIMEOUT_SECONDS = 10.0
 REFRESH_TIMEOUT_SECONDS = 8.0
 
 EXPIRED_NOTICE_KEY = "auth_expired_notice"
 AUTH_STATE_KEY = "auth_state"
 AUTH_STATE_EXPIRED = "expired"
 PROFILE_SYNCED_AT_KEY = "profile_synced_at"
+PROFILE_SYNC_CLAIM_KEY = "profile_sync_claimed_at"
 
 
 class LitresAuthError(Exception):
@@ -60,7 +64,12 @@ class LitresAuthRejectedError(LitresAuthError):
     """LitRes definitively rejected the credentials/tokens, or no re-auth path exists.
 
     The stored LitRes session is dead; the user must log in again.
+    `status_code` is LitRes's HTTP status when the rejection came from a response.
     """
+
+    def __init__(self, message: str = "", status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class LitresAuthTransientError(LitresAuthError):
@@ -97,13 +106,18 @@ def litres_login(
         raise LitresAuthTransientError(f"Connection error during login: {exc}") from exc
 
     if resp.status_code == 401:
-        raise LitresAuthRejectedError("Authentication failed: wrong email or password")
+        raise LitresAuthRejectedError("Authentication failed: wrong email or password", status_code=401)
     if resp.status_code >= 500:
         raise LitresAuthTransientError(f"Authentication failed: HTTP {resp.status_code}")
     if resp.status_code >= 400:
-        raise LitresAuthRejectedError(f"Authentication failed: HTTP {resp.status_code}")
+        raise LitresAuthRejectedError(
+            f"Authentication failed: HTTP {resp.status_code}", status_code=resp.status_code,
+        )
 
-    data = resp.json()
+    try:
+        data = resp.json()
+    except ValueError as exc:
+        raise LitresAuthError(f"Login response is not JSON (HTTP {resp.status_code})") from exc
     payload = (data.get("payload") or {}).get("data", {})
     access_token = payload.get("access_token")
     if not access_token:
@@ -220,7 +234,11 @@ def _load_stored_tokens(session, user_id: int) -> dict | None:
 
 
 def _persist_tokens(session, user_id: int, email: str, auth_result: AuthResult) -> None:
-    """Save tokens to User.session_data, preserving profile_synced_at for the same account."""
+    """Save tokens to User.session_data.
+
+    For the same account, profile_synced_at, the profile-sync claim and the
+    long-lived sid (when the renewal result carries none) are preserved.
+    """
     from app.db.models import User
     user = session.get(User, user_id)
     if not user:
@@ -234,18 +252,27 @@ def _persist_tokens(session, user_id: int, email: str, auth_result: AuthResult) 
         "refresh_token": auth_result.refresh_token,
         "expires_at": expires_at.isoformat(),
     }
+    same_account = (previous.get("email") or "").lower() == (email or "").lower()
     if auth_result.sid:
         data["sid"] = auth_result.sid
-    same_account = (previous.get("email") or "").lower() == (email or "").lower()
-    if same_account and previous.get(PROFILE_SYNCED_AT_KEY):
-        data[PROFILE_SYNCED_AT_KEY] = previous[PROFILE_SYNCED_AT_KEY]
+    elif same_account and previous.get("sid"):
+        data["sid"] = previous["sid"]
+    if same_account:
+        for key in (PROFILE_SYNCED_AT_KEY, PROFILE_SYNC_CLAIM_KEY):
+            if previous.get(key):
+                data[key] = previous[key]
     user.session_data = json.dumps(data)
     session.commit()
     log.info("Persisted auth tokens to User.session_data (expires_at=%s)", expires_at.isoformat())
 
 
-def record_profile_synced(session_factory, user_id: int, when: datetime | None = None) -> None:
-    """Store the time of the last successful profile sync in session_data."""
+def record_profile_synced(
+    session_factory, user_id: int, when: datetime | None = None, email: str | None = None,
+) -> None:
+    """Store the time of the last successful profile sync in session_data.
+
+    With `email`, nothing is written unless that account is still the linked one.
+    """
     from app.db.models import User
 
     with session_factory() as session:
@@ -255,12 +282,15 @@ def record_profile_synced(session_factory, user_id: int, when: datetime | None =
         data = parse_session_data(user.session_data)
         if not has_litres_tokens(data):
             return  # logged out meanwhile — do not resurrect session_data
+        if email is not None and (data.get("email") or "").lower() != email.lower():
+            return  # switched account meanwhile
+        data.pop(PROFILE_SYNC_CLAIM_KEY, None)
         data[PROFILE_SYNCED_AT_KEY] = (when or datetime.now(timezone.utc)).isoformat()
         user.session_data = json.dumps(data)
         session.commit()
 
 
-def expire_litres_session(session_factory, user_id: int) -> bool:
+def expire_litres_session(session_factory, user_id: int, email: str | None = None) -> bool:
     """Mark the user's LitRes session as expired because it can no longer be renewed.
 
     Only the LitRes tokens are dropped. The account identity (session_data email,
@@ -270,6 +300,9 @@ def expire_litres_session(session_factory, user_id: int) -> bool:
     in again (same email → list is refreshed; other email → replaced, see
     controllers/auth.login). A one-shot notice flag lets the next page render
     tell the user why.
+
+    With `email`, only that account is expired (a background sync that
+    started before an account switch must not log out the new account).
 
     Returns True if a logged-in session was expired.
     """
@@ -281,6 +314,8 @@ def expire_litres_session(session_factory, user_id: int) -> bool:
             return False
         data = parse_session_data(user.session_data)
         if not has_litres_tokens(data):
+            return False
+        if email is not None and (data.get("email") or "").lower() != email.lower():
             return False
         expired = {
             "email": data.get("email") or user.litres_login or "",

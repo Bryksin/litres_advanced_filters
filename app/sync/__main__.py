@@ -5,6 +5,10 @@ Usage:
     python -m app.sync bulk [--resume] [--max-pages N] [--max-hours H] [--dry-run] [--verbose]
     python -m app.sync heal [--dry-run] [--verbose]
     python -m app.sync retry-failed [--failed-file PATH]
+    python -m app.sync boot-cleanup   # container start: reap 'running' rows, prune logs
+    python -m app.sync prune-logs
+
+Every command first prunes old per-run log files and caps cron.log (S15).
 """
 
 import argparse
@@ -38,6 +42,18 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     bulk.add_argument("--dry-run", action="store_true", help="Fetch but do not write to DB")
     bulk.add_argument("--verbose", action="store_true", help="Print per-book log lines to console")
+    bulk.add_argument(
+        "--refresh-series", type=int, metavar="N", default=None,
+        help="After a successful run, re-read up to N series rosters (default: nightly budget; 0 = off)",
+    )
+    bulk.add_argument(
+        "--refresh-books", type=int, metavar="N", default=None,
+        help="After a successful run, re-check up to N stale books (default: nightly budget; 0 = off)",
+    )
+    bulk.add_argument(
+        "--no-refresh-genres", action="store_true",
+        help="Do not re-scrape the genre tree before a full (no --max-pages) run",
+    )
 
     # retry-failed
     retry = sub.add_parser("retry-failed", help="Retry books from failed_books.jsonl")
@@ -48,7 +64,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     # heal
-    heal_cmd = sub.add_parser("heal", help="Fix structural gaps (missing narrators, genres)")
+    heal_cmd = sub.add_parser("heal", help="Fix structural gaps (missing narrators, genres, authors)")
     heal_cmd.add_argument("--dry-run", action="store_true", help="Report without writing")
     heal_cmd.add_argument("--verbose", action="store_true", help="Print detailed log lines to console")
 
@@ -59,12 +75,52 @@ def _build_parser() -> argparse.ArgumentParser:
     profile_cmd.add_argument("--dry-run", action="store_true", help="Fetch but do not write to DB")
     profile_cmd.add_argument("--verbose", action="store_true", help="Print detailed log lines to console")
 
+    sub.add_parser("boot-cleanup", help="Container start: mark leftover 'running' syncs failed, prune logs")
+    sub.add_parser("prune-logs", help="Delete old sync log files and cap cron.log")
+
     return parser
+
+
+def _prune_logs() -> None:
+    from app.config.config import Config
+    from app.sync.logging_setup import prune_sync_logs
+
+    try:
+        stats = prune_sync_logs(Config.SYNC_DIR)
+        if stats["deleted"] or stats["cron_log_truncated"]:
+            print(
+                f"Log retention: deleted {stats['deleted']} file(s), "
+                f"cron.log truncated={bool(stats['cron_log_truncated'])}, "
+                f"freed {stats['freed_bytes'] / 1e6:.1f} MB"
+            )
+    except Exception as exc:  # retention must never block a sync
+        print(f"Log retention failed (ignored): {exc}")
 
 
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
+
+    _prune_logs()
+
+    if args.command == "prune-logs":
+        return
+
+    if args.command == "boot-cleanup":
+        from app.db import SessionLocal
+        from app.sync.common import reap_all_running_sync_runs
+
+        with SessionLocal() as session:
+            n = reap_all_running_sync_runs(session)
+        print(f"Boot cleanup: {n} leftover running sync_run row(s) marked failed")
+        return
+
+    if args.command == "bulk":
+        from app.sync.refresh import DEFAULT_BOOK_REFRESH, DEFAULT_SERIES_REFRESH
+        if args.refresh_series is None:
+            args.refresh_series = DEFAULT_SERIES_REFRESH
+        if args.refresh_books is None:
+            args.refresh_books = DEFAULT_BOOK_REFRESH
 
     if args.command == "genres":
         from app.sync.genres import run_genres
@@ -87,12 +143,13 @@ def main() -> None:
 
         from app.db import SessionLocal
         from app.scrapers.client import RateLimitedClient
-        from app.sync.heal import heal_narrators, heal_genres
+        from app.sync.heal import heal_authors, heal_genres, heal_narrators
 
         with SessionLocal() as session:
             with RateLimitedClient() as client:
                 n_stats = heal_narrators(session, client, dry_run=args.dry_run)
                 g_stats = heal_genres(session, client, dry_run=args.dry_run)
+                a_stats = heal_authors(session, client, dry_run=args.dry_run)
                 if not args.dry_run:
                     session.commit()
 
@@ -103,6 +160,10 @@ def main() -> None:
         print(
             f"Heal genres: {g_stats['total']} total, {g_stats['healed']} healed, "
             f"{g_stats['still_empty']} still empty, {g_stats['failed']} failed"
+        )
+        print(
+            f"Heal authors: {a_stats['total']} total, {a_stats['healed']} healed, "
+            f"{a_stats['unresolvable']} unresolvable, {a_stats['failed']} failed"
         )
 
     elif args.command == "profile":
