@@ -96,9 +96,13 @@ When adding columns or tables: edit `app/db/models.py`, run `alembic revision --
 - **Never commit directly to master.** All changes go through feature branches + PRs.
 - Branch naming: `feat/short-description`, `fix/short-description`, `docs/short-description`
 - PRs are **squash-merged** to keep master history clean (one commit per feature/fix).
-- **Bundle all docs into the same PR as the code fix.** Every merge to master triggers
-  a Docker image rebuild and patch version bump (publish.yml has no path filter), so a
-  separate docs-only PR causes a wasted version bump. Before opening a PR, sweep for
+- **Publishing is path-filtered.** A merge to master builds the Docker image and bumps the
+  patch version only when it changes files that go into the image (`paths:` in
+  `.github/workflows/publish.yml`, mirroring the `COPY` lines in `docker/app/Dockerfile`;
+  keep the two in sync when adding a `COPY`). Docs, tests, devcontainer, `bin/` and
+  workflow-only merges do not publish. Force a release by pushing a `v*` tag; skip one for
+  an image change with `[skip ci]` in the squash commit / PR title.
+- **Still bundle docs with the code fix** where they belong together. Before opening a PR, sweep for
   required updates: `docs/status/Phase-N-status.md`, `docs/Current Development State.md`,
   README, CLAUDE.md, and memory files. Verify the working tree is clean of related
   uncommitted changes before requesting merge.

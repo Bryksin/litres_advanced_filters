@@ -5,6 +5,22 @@ on:
     branches: [master]
     tags:
       - "v*"
+    # Only a master push that changes what goes INTO the image builds,
+    # publishes and bumps the version. This list mirrors the COPY lines in
+    # docker/app/Dockerfile — keep them in sync. Path filters are not
+    # evaluated for tag pushes, so a pushed v* tag always publishes (use that
+    # to force a release). To skip publishing for an image change, put
+    # "[skip ci]" in the commit message (with squash merges: in the PR title);
+    # the PR's own CI run still tests it.
+    paths:
+      - "app/**"
+      - "templates/**"
+      - "static/**"
+      - "db/**"
+      - "alembic.ini"
+      - "docker/app/**"
+      - "pyproject.toml"
+      - "poetry.lock"
 
 # Third-party actions are pinned to commit SHAs (this workflow holds
 # contents:write and the Docker Hub secrets); the comment names the version.
