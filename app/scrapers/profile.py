@@ -23,9 +23,29 @@ class LitresProfileError(Exception):
     """Raised when fetching profile data fails."""
 
 
+class LitresProfileAuthError(LitresProfileError):
+    """LitRes rejected the credential (HTTP 401/403) — JWT expired or sid invalid."""
+
+
+def auth_headers(access_token: str | None = None, sid: str | None = None) -> dict[str, str]:
+    """LitRes auth headers: Bearer JWT if given, else the long-lived `Session-Id`.
+
+    Verified 2026-11-06: /users/me/* accepts either `Authorization: Bearer <jwt>`
+    or `Session-Id: <sid>` (sid from the login response). An invalid sid gives
+    HTTP 403 {"error": {"code": "SESSION_INVALID"}}.
+    """
+    if access_token:
+        return {"authorization": f"Bearer {access_token}"}
+    if sid:
+        return {"session-id": sid}
+    raise ValueError("Either access_token or sid is required")
+
+
 def fetch_finished_book_ids(
     client: httpx.Client,
-    access_token: str,
+    access_token: str | None = None,
+    *,
+    sid: str | None = None,
 ) -> list[int]:
     """Fetch all book IDs the user has marked as finished/listened.
 
@@ -35,16 +55,18 @@ def fetch_finished_book_ids(
     Args:
         client: An httpx.Client instance.
         access_token: JWT from litres_login().
+        sid: Session id from litres_login(); used when access_token is None.
 
     Returns:
         List of book IDs (art_id) that are finished.
 
     Raises:
-        LitresProfileError: On auth failure or network error.
+        LitresProfileAuthError: Credential rejected (HTTP 401/403).
+        LitresProfileError: Other HTTP or network error.
     """
     headers = {
         **DEFAULT_HEADERS,
-        "authorization": f"Bearer {access_token}",
+        **auth_headers(access_token, sid),
     }
 
     all_book_ids: list[int] = []
@@ -64,8 +86,10 @@ def fetch_finished_book_ids(
         except httpx.HTTPError as exc:
             raise LitresProfileError(f"Network error fetching finished books: {exc}") from exc
 
-        if resp.status_code == 401:
-            raise LitresProfileError("Token expired or invalid (HTTP 401)")
+        if resp.status_code in (401, 403):
+            raise LitresProfileAuthError(
+                f"Token expired or invalid (HTTP {resp.status_code}): {resp.text[:200]}"
+            )
         if resp.status_code >= 400:
             body = resp.text[:500]
             log.error("Finished books API error: HTTP %d — %s", resp.status_code, body)

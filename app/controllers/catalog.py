@@ -45,12 +45,6 @@ def index():
             if query.hide_listened and query.incomplete_series_only:
                 query.hide_listened = False
             settings_svc.save(query)
-            # F-5/F-11 require LitRes login
-            from app.controllers.auth import _is_authenticated
-            is_auth_check, _ = _is_authenticated(SessionLocal, g.user_id)
-            if not is_auth_check:
-                query.hide_listened = False
-                query.incomplete_series_only = False
         elif "_reset" in request.args:
             query = settings_svc.reset()
         elif request.args.get("genre_id"):
@@ -58,12 +52,25 @@ def index():
             query.genre_id = request.args.get("genre_id")
 
         # Pagination + sort from URL (not persisted)
-        query.page = int(request.args.get("page", 1))
+        query.page = max(1, _int_or_none(request.args.get("page")) or 1)
         query.sort = request.args.get("sort", query.sort)
 
+        # The sidebar highlights the default genre when none is saved; filter
+        # the catalog by that same genre so the page matches the highlight.
         genre_id = query.genre_id or Config.DEFAULT_GENRE_ID
+        query.genre_id = genre_id
         genres = get_genre_tree(session)
         open_genre_ids = get_genre_ancestor_ids(session, genre_id)
+
+        # F-5/F-11 need the LitRes listened list. Disable them for this request
+        # (the saved settings are kept) on every path, not only on form submit,
+        # when the user has no LitRes account. An expired-but-known session
+        # still counts as authenticated and filters on the cached list.
+        from app.controllers.auth import _get_listened_count, _is_authenticated
+        is_authenticated, auth_email = _is_authenticated(SessionLocal, g.user_id)
+        if not is_authenticated:
+            query.hide_listened = False
+            query.incomplete_series_only = False
 
         result = get_catalog(session, query, user_id=g.user_id)
 
@@ -73,9 +80,6 @@ def index():
             .count()
         )
 
-        # Auth status for template
-        from app.controllers.auth import _is_authenticated, _get_listened_count
-        is_authenticated, auth_email = _is_authenticated(SessionLocal, g.user_id)
         listened_count = _get_listened_count(SessionLocal, g.user_id) if is_authenticated else 0
 
         return render_template(

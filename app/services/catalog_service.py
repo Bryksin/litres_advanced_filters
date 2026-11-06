@@ -7,12 +7,13 @@ Two-query approach:
 2. Load detail data only for the page's cards
 """
 
+import dataclasses
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
-from sqlalchemy import case, func, literal
+from sqlalchemy import and_, case, false, func, literal, or_, true
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import (
@@ -102,24 +103,9 @@ def _build_filtered_book_query(
     elif query.standalones_only:
         q = q.filter(~has_series)
 
-    # Series size filter is applied post-grouping in _get_paginated_card_groups()
-    # because other filters (subscription, narrator exclusion) reduce the actual
-    # book count per series — filtering here would use pre-filter counts.
-
-    # Full series under subscription (F-10)
-    if query.series_only and query.full_series_subscription:
-        series_with_non_sub = (
-            session.query(BookSeries.series_id)
-            .join(Book, Book.id == BookSeries.book_id)
-            .filter(Book.is_available_with_subscription == False)  # noqa: E712
-            .subquery()
-        )
-        q = q.filter(
-            ~Book.id.in_(
-                session.query(BookSeries.book_id)
-                .filter(BookSeries.series_id.in_(session.query(series_with_non_sub.c.series_id)))
-            )
-        )
+    # Series size (series_min/series_max) and full series under subscription (F-10)
+    # are series-level properties; they are applied on BookSeries rows during
+    # grouping (see _series_level_filter), not here on books.
 
     # Author exclusion
     if query.exclude_authors and query.excluded_authors:
@@ -179,9 +165,62 @@ def _build_filtered_book_query(
     return q
 
 
+def _series_level_filter(session: Session, query: CatalogQuery, user_id: int):
+    """WHERE clause on the (Book LEFT JOIN BookSeries) grouping rows, or None.
+
+    Applies the filters that describe a whole series rather than a single book:
+
+    - Series size (series_min / series_max) is the number of the series' audiobooks
+      that pass all book filters EXCEPT the genre. The genre selects which series
+      are shown; it must not shorten a series whose other books carry a different
+      genre tag. Standalones have size 1.
+    - Full series under subscription (F-10) drops a series group when any member
+      of that series is not available by subscription. It works per series, so a
+      book that also belongs to another, fully subscribed series stays in that
+      other series' card.
+    """
+    clauses = []
+
+    if query.series_min is not None or query.series_max is not None:
+        size_q = _build_filtered_book_query(
+            session, dataclasses.replace(query, genre_id=None), user_id,
+        )
+        size_ids = size_q.with_entities(Book.id).subquery().select()
+        sized_series = (
+            session.query(BookSeries.series_id)
+            .filter(BookSeries.book_id.in_(size_ids))
+            .group_by(BookSeries.series_id)
+        )
+        if query.series_min is not None:
+            sized_series = sized_series.having(func.count() >= query.series_min)
+        if query.series_max is not None:
+            sized_series = sized_series.having(func.count() <= query.series_max)
+
+        standalone_ok = (
+            (query.series_min is None or query.series_min <= 1)
+            and (query.series_max is None or query.series_max >= 1)
+        )
+        clauses.append(or_(
+            and_(BookSeries.series_id.is_(None), true() if standalone_ok else false()),
+            BookSeries.series_id.in_(sized_series),
+        ))
+
+    if query.series_only and query.full_series_subscription:
+        series_with_non_sub = (
+            session.query(BookSeries.series_id)
+            .join(Book, Book.id == BookSeries.book_id)
+            .filter(Book.is_available_with_subscription == False)  # noqa: E712
+        )
+        clauses.append(or_(
+            BookSeries.series_id.is_(None),
+            BookSeries.series_id.not_in(series_with_non_sub),
+        ))
+
+    return and_(*clauses) if clauses else None
+
+
 def _get_paginated_card_groups(session, base_q, sort_key, page, page_size,
-                               series_min=None, series_max=None,
-                               rating_count_min=None):
+                               series_filter=None, rating_count_min=None):
     """SQL-level grouping and pagination.
 
     Groups filtered books by series_id (for series books) or book.id (for standalones).
@@ -212,11 +251,9 @@ def _get_paginated_card_groups(session, base_q, sort_key, page, page_size,
         .group_by(group_key, card_type)
     )
 
-    # Series size filter — applied here so it counts post-filter books
-    if series_min is not None:
-        groups_q = groups_q.having(func.count() >= series_min)
-    if series_max is not None:
-        groups_q = groups_q.having(func.count() <= series_max)
+    # Series-level filters (size, full subscription) — see _series_level_filter()
+    if series_filter is not None:
+        groups_q = groups_q.filter(series_filter)
 
     # Min votes filter — on SUM(rating_count) so series use total, matching display
     if rating_count_min is not None:
@@ -324,7 +361,8 @@ def _load_card_details(session, page_groups):
         bs_rows = (
             session.query(BookSeries)
             .filter(BookSeries.series_id.in_(series_ids))
-            # Only consider books that passed filters — join with filtered books
+            # First book of the whole series (spec: cover = first book), not of
+            # the filtered subset
             .join(Book, Book.id == BookSeries.book_id)
             .filter(Book.art_type == 1)
             .all()
@@ -406,7 +444,7 @@ def _load_card_details(session, page_groups):
     return cards
 
 
-def _handle_f11_incomplete_series(session, base_q, query, user_id):
+def _handle_f11_incomplete_series(session, base_q, query, user_id, series_filter=None):
     """F-11 special path: incomplete series only.
 
     Uses Python post-filter since the result set is small (only user's listened series).
@@ -430,6 +468,12 @@ def _handle_f11_incomplete_series(session, base_q, query, user_id):
         .filter(Book.id.in_(filtered_ids))
         .group_by(BookSeries.series_id)
     )
+    if series_filter is not None:
+        groups_q = groups_q.filter(series_filter)
+    if query.rating_count_min is not None:
+        groups_q = groups_q.having(
+            func.sum(func.coalesce(Book.rating_count, 0)) >= query.rating_count_min
+        )
 
     all_groups = groups_q.all()
     if not all_groups:
@@ -515,15 +559,16 @@ def get_catalog(
     then loads detail data only for the page's cards.
     """
     base_q = _build_filtered_book_query(session, query, user_id)
+    series_filter = _series_level_filter(session, query, user_id)
 
     # F-11 special path
     if query.incomplete_series_only:
-        return _handle_f11_incomplete_series(session, base_q, query, user_id)
+        return _handle_f11_incomplete_series(session, base_q, query, user_id, series_filter)
 
     # Normal path: SQL-level grouping + pagination
     page_groups, total_count = _get_paginated_card_groups(
         session, base_q, query.sort, query.page, query.page_size,
-        series_min=query.series_min, series_max=query.series_max,
+        series_filter=series_filter,
         rating_count_min=query.rating_count_min,
     )
 

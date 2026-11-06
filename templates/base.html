@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% import "_macros.html" as m %}
 <html lang="ru">
 <head>
   <meta charset="utf-8">
@@ -12,10 +13,17 @@
 
   {# 8.27 Mobile top bar #}
   <header class="mobile-bar">
-    <button class="mobile-bar__menu" aria-label="Открыть фильтры" aria-expanded="false" aria-controls="sidebar">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    {# Opens the drawer on the "Фильтры" tab; badge = number of active filters #}
+    <button type="button" class="mobile-bar__menu" data-open-tab="filters" aria-label="Открыть фильтры" aria-expanded="false" aria-controls="sidebar">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2.2" fill="currentColor"/><circle cx="15" cy="12" r="2.2" fill="currentColor"/><circle cx="8" cy="18" r="2.2" fill="currentColor"/></svg>
+      <span class="mobile-bar__badge" data-active-filter-count hidden></span>
+      {% if auth_expired %}<span class="auth-alert-dot auth-alert-dot--bar" aria-hidden="true"></span>{% endif %}
     </button>
-    <span class="mobile-bar__title">Каталог</span>
+    {# Opens the drawer on the "Жанры" tab; label = current genre (filled by sidebar.js) #}
+    <button type="button" class="mobile-bar__title" data-open-tab="genres" aria-controls="sidebar" aria-label="Выбрать жанр">
+      <span class="mobile-bar__title-text" data-current-genre-name>Каталог</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
     {% if session.get('is_admin') %}
     <a href="/admin/" class="mobile-bar__admin-link">Админ</a>
     {% endif %}
@@ -34,14 +42,6 @@
   <div class="app-layout">
     {# 8.18 ARIA landmarks #}
     <aside class="sidebar" id="sidebar" role="complementary" aria-label="Фильтры каталога">
-      {# Mobile drawer close button #}
-      <div class="sidebar__drawer-header">
-        <span>Фильтры</span>
-        <button class="sidebar__drawer-close" aria-label="Закрыть фильтры">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-
       <div class="sidebar__brand">
         <a href="{{ url_for('catalog.index') }}">Литрес Фильтры</a>
         <span class="sidebar__brand-sub">Расширенный каталог</span>
@@ -50,6 +50,34 @@
         {% endif %}
       </div>
 
+      {# Panel switcher (all widths) + mobile drawer close button.
+         Each tab panel is the single scroll region of the sidebar. #}
+      <div class="sidebar__drawer-header">
+        <div class="sidebar__tabs" role="tablist" aria-label="Жанры и фильтры">
+          <button type="button" class="sidebar__tab" role="tab" id="tab-genres"
+                  aria-controls="panel-genres" aria-selected="true">Жанры</button>
+          <button type="button" class="sidebar__tab" role="tab" id="tab-filters"
+                  aria-controls="filter-section" aria-selected="false" tabindex="-1">
+            Фильтры<span class="sidebar__tab-badge" data-active-filter-count hidden></span>
+            {%- if auth_expired %}<span class="auth-alert-dot" title="Сессия ЛитРес истекла"></span>{% endif %}
+          </button>
+        </div>
+        <button type="button" class="sidebar__drawer-close" aria-label="Закрыть панель">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <script>
+        // Apply the remembered tab before first paint (no flash of the wrong panel).
+        (function () {
+          var tab = 'genres';
+          try {
+            var s = JSON.parse(sessionStorage.getItem('laf.sidebar') || '{}');
+            if (s.tab === 'filters') tab = 'filters';
+          } catch (e) { /* storage unavailable: default tab */ }
+          document.getElementById('sidebar').setAttribute('data-tab', tab);
+        })();
+      </script>
+
       <form id="filter-form" method="get" action="{{ url_for('catalog.index') }}">
       <input type="hidden" id="genre-id-input" name="genre_id" value="{{ selected_genre_id or '' }}">
       <input type="hidden" name="_submit" value="1">
@@ -57,11 +85,17 @@
       <input type="hidden" id="excluded-authors-json" name="excluded_authors_json" value="{{ settings.excluded_authors | tojson if settings and settings.excluded_authors else '[]' }}">
       <input type="hidden" id="f-sort-hidden" name="sort" value="{{ settings.sort if settings and settings.sort else 'release_date_desc' }}">
 
-      {# ── Zone 2: Genre tree (own scroll container) ── #}
-      <span class="sidebar__section">Жанры</span>
-      <nav class="genre-tree" role="region" aria-label="Дерево жанров">
-        {# 8.17 Sidebar skip link #}
-        <a href="#filter-section" class="skip-link skip-link--sidebar">Перейти к фильтрам</a>
+      {# ── Tab panel 1: Genre tree (panel is the only scroll container) ── #}
+      <div class="sidebar__panel sidebar__panel--genres" id="panel-genres" role="tabpanel" aria-labelledby="tab-genres">
+      <div class="genre-search">
+        {# No name attribute: never serialized into the catalog URL #}
+        <input type="search" id="genre-search" class="genre-search__input"
+               placeholder="Найти жанр" aria-label="Найти жанр" autocomplete="off" enterkeyhint="search">
+      </div>
+      <p class="genre-search__empty" id="genre-search-empty" hidden>Жанр не найден</p>
+      <nav class="genre-tree" aria-label="Дерево жанров">
+        {# 8.17 Sidebar skip link (switches to the "Фильтры" tab) #}
+        <a href="#filter-section" class="skip-link skip-link--sidebar" data-sidebar-tab="filters">Перейти к фильтрам</a>
         {% macro render_genres(items, depth=0) %}
         <ul class="genre-tree__list" data-depth="{{ depth }}">
           {% for g in items %}
@@ -87,9 +121,17 @@
         {{ render_genres(genres) }}
         {% endblock %}
       </nav>
+      </div>{# /#panel-genres #}
 
-      {# ── Zone 3: Filters (scrollable, fills remaining space) ── #}
-      <div class="sidebar__filters" id="filter-section" role="region" aria-label="Дополнительные фильтры" tabindex="-1">
+      {# ── Tab panel 2: Filters (panel is the only scroll container) ── #}
+      <div class="sidebar__panel sidebar__filters" id="filter-section" role="tabpanel" aria-labelledby="tab-filters" tabindex="-1">
+
+        {# Context: which genre the filters apply to; click switches to the genre tab #}
+        <button type="button" class="sidebar__current-genre" data-sidebar-tab="genres">
+          <span class="sidebar__current-genre-label">Жанр</span>
+          <span class="sidebar__current-genre-name" data-current-genre-name>—</span>
+          <span class="sidebar__current-genre-action">Изменить</span>
+        </button>
 
         {# ─── Серии / Одиночные ─── #}
         <span class="sidebar__section">Серии / Одиночные</span>
@@ -212,7 +254,15 @@
         <span class="sidebar__section">Прослушанные</span>
         <div class="sidebar__filter-body" id="auth-zone">
 
-          {% if is_authenticated %}
+          {% if is_authenticated and auth_expired %}
+          {# LitRes session expired: listened data is kept, offer re-login #}
+          <div class="auth-user auth-user--expired" id="auth-user-badge">
+            <span class="auth-user__email" title="{{ auth_email }}">{{ auth_email }}</span>
+            <button type="button" class="auth-user__logout" id="auth-logout-btn" title="Выйти">&#10005;</button>
+            <span class="auth-user__state">Сессия истекла</span>
+            <button type="button" class="btn-auth-login btn-auth-login--compact" id="auth-open-btn" onclick="openAuthModal()">Войти снова</button>
+          </div>
+          {% elif is_authenticated %}
           <div class="auth-user" id="auth-user-badge">
             <span class="auth-user__email" title="{{ auth_email }}">{{ auth_email }}</span>
             <button type="button" class="auth-user__logout" id="auth-logout-btn" title="Выйти">&#10005;</button>
@@ -252,9 +302,30 @@
       </div>{# /.sidebar__filters #}
 
       </form>
+
+      {# Mobile drawer only: filters auto-apply, this just reveals the results #}
+      <div class="sidebar__footer">
+        <button type="button" class="sidebar__show-results" id="sidebar-show-results">
+          {% if total_count is defined %}Показать <span class="sidebar__show-count">{{ m.count_label(total_count, settings) }}</span>{% else %}Показать результаты{% endif %}
+        </button>
+      </div>
     </aside>
 
     <main id="main-content" class="main" tabindex="-1">
+      {# One-shot auth notice (e.g. LitRes session expired). Lives in <main> so it
+         is visible on mobile without opening the drawer. #}
+      {% if auth_notice %}
+      <div class="page-notice" role="status" id="auth-notice">
+        <p class="page-notice__text">{{ auth_notice }}</p>
+        <div class="page-notice__actions">
+          {% if auth_expired %}
+          <button type="button" class="page-notice__action" onclick="openAuthModal()">Войти снова</button>
+          {% endif %}
+          <button type="button" class="page-notice__close" aria-label="Скрыть уведомление"
+                  onclick="this.closest('.page-notice').remove()">&times;</button>
+        </div>
+      </div>
+      {% endif %}
       {# ── Toolbar: title + sort + active filter chips ── #}
       <div class="results-toolbar">
         <div class="results-toolbar__row">
@@ -286,7 +357,7 @@
     </div>
     <div class="auth-modal__body">
       <input type="email" class="auth-modal__input" id="auth-email"
-             placeholder="Email" autocomplete="email">
+             placeholder="Email" autocomplete="email" value="{{ auth_email if auth_expired and auth_email else '' }}">
       <input type="password" class="auth-modal__input" id="auth-password"
              placeholder="Пароль" autocomplete="current-password">
       <p class="auth-modal__error" id="auth-error"></p>
@@ -306,6 +377,7 @@
   {# 8.23 Screen reader live region #}
   <div aria-live="polite" class="visually-hidden" id="sr-announce"></div>
 
+  <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
   <script>
   // Screen reader announcement helper
   function announceToSR(text) {
@@ -419,6 +491,8 @@
   }
 
   function navigateWithCleanUrl() {
+    // Remember sidebar tab / scroll / drawer state across the reload (sidebar.js)
+    if (window.SidebarUI) window.SidebarUI.persist();
     var overlay = document.getElementById('loading-overlay');
     if (overlay) {
       overlay.setAttribute('aria-hidden', 'false');
@@ -459,6 +533,8 @@
     tree.querySelectorAll('.genre-tree__details').forEach(function(det) {
       det.addEventListener('toggle', function() {
         if (!this.open) return;
+        // Genre search expands many branches at once: skip the accordion then
+        if (window.SidebarUI && window.SidebarUI.isSearching()) return;
         var list = this.parentElement.parentElement;
         var siblings = list.querySelectorAll(':scope > .genre-tree__item > .genre-tree__details');
         for (var i = 0; i < siblings.length; i++) {
@@ -472,6 +548,8 @@
     var overlay = document.getElementById('loading-overlay');
 
     function submitWithGenre(genreId) {
+      // Picking a genre should land on the results, not re-open the drawer
+      if (window.SidebarUI) window.SidebarUI.markGenreNavigation();
       clearSelection();
       genreInput.value = genreId;
       navigateWithCleanUrl();
@@ -711,41 +789,7 @@
     }
   })();
 
-  // ── 8.26 Mobile drawer ──
-  (function() {
-    var sidebar = document.getElementById('sidebar');
-    var scrim = document.getElementById('drawer-scrim');
-    var menuBtn = document.querySelector('.mobile-bar__menu');
-    var closeBtn = document.querySelector('.sidebar__drawer-close');
-    var mainContent = document.getElementById('main-content');
-    if (!sidebar || !menuBtn) return;
-
-    function openDrawer() {
-      sidebar.classList.add('is-open');
-      scrim.classList.add('is-visible');
-      menuBtn.setAttribute('aria-expanded', 'true');
-      if (mainContent) mainContent.setAttribute('inert', '');
-      closeBtn && closeBtn.focus();
-    }
-
-    function closeDrawer() {
-      sidebar.classList.remove('is-open');
-      scrim.classList.remove('is-visible');
-      menuBtn.setAttribute('aria-expanded', 'false');
-      if (mainContent) mainContent.removeAttribute('inert');
-      menuBtn.focus();
-    }
-
-    menuBtn.addEventListener('click', openDrawer);
-    closeBtn && closeBtn.addEventListener('click', closeDrawer);
-    scrim.addEventListener('click', closeDrawer);
-
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape' && sidebar.classList.contains('is-open')) {
-        closeDrawer();
-      }
-    });
-  })();
+  // ── 8.26 Mobile drawer + sidebar tabs: see static/js/sidebar.js ──
 
   // ── Clear ignored list ──
   (function() {
@@ -766,7 +810,10 @@
     modal.showModal ? modal.showModal() : modal.setAttribute('open', '');
     scrim.classList.add('is-visible');
     var emailInput = document.getElementById('auth-email');
-    if (emailInput) setTimeout(function() { emailInput.focus(); }, 100);
+    var pwInput = document.getElementById('auth-password');
+    // Re-login after expiry: email is prefilled, go straight to the password
+    var target = (emailInput && emailInput.value && pwInput) ? pwInput : emailInput;
+    if (target) setTimeout(function() { target.focus(); }, 100);
   }
 
   function closeAuthModal() {
