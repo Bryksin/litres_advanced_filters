@@ -140,12 +140,58 @@
   }
   updateBadges();
 
+  // ── Genre tree disclosure (F12): the chevron expands/collapses, the name selects ──
+  function childList(li) {
+    return li.querySelector(':scope > .genre-tree__list');
+  }
+  function isOpen(li) {
+    return li.classList.contains('is-open');
+  }
+  function setOpen(li, open) {
+    var list = childList(li);
+    var toggle = li.querySelector(':scope > .genre-tree__row > .genre-tree__toggle');
+    li.classList.toggle('is-open', open);
+    if (list) list.hidden = !open;
+    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  function closeDeep(li) {
+    setOpen(li, false);
+    li.querySelectorAll('.genre-tree__item--parent.is-open').forEach(function (d) { setOpen(d, false); });
+  }
+  if (tree) {
+    tree.addEventListener('click', function (e) {
+      var toggle = e.target.closest('.genre-tree__toggle');
+      if (!toggle || !tree.contains(toggle)) return;
+      var li = toggle.closest('.genre-tree__item--parent');
+      var open = !isOpen(li);
+      if (open && !searching) {
+        // Accordion: opening a branch closes its siblings (not while searching)
+        var siblings = li.parentElement.querySelectorAll(':scope > .genre-tree__item--parent.is-open');
+        for (var i = 0; i < siblings.length; i++) {
+          if (siblings[i] !== li) closeDeep(siblings[i]);
+        }
+      }
+      if (open) setOpen(li, true); else closeDeep(li);
+    });
+    // Tree-style keys on a parent's name: Right expands, Left collapses
+    tree.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      var link = e.target.closest('.genre-tree__link--parent');
+      if (!link) return;
+      var li = link.closest('.genre-tree__item--parent');
+      if ((e.key === 'ArrowRight') !== isOpen(li)) {
+        e.preventDefault();
+        li.querySelector(':scope > .genre-tree__row > .genre-tree__toggle').click();
+      }
+    });
+  }
+
   // ── Genre search (client-side filter of the tree) ──
   function norm(s) {
     return (s || '').toLowerCase().replace(/ё/g, 'е').trim();
   }
   function itemLabel(li) {
-    var own = li.querySelector(':scope > .genre-tree__link, :scope > .genre-tree__details > .genre-tree__summary');
+    var own = li.querySelector(':scope > .genre-tree__link, :scope > .genre-tree__row > .genre-tree__link');
     return own ? own.textContent : '';
   }
   // Shows/hides <li> for query q; returns true if it or a descendant matches.
@@ -153,14 +199,14 @@
   // branches are expanded only towards genuine descendant matches.
   function filterItem(li, q, parentMatched) {
     var selfMatch = !!q && norm(itemLabel(li)).indexOf(q) !== -1;
-    var details = li.querySelector(':scope > .genre-tree__details');
+    var list = childList(li);
     var childMatch = false;
-    if (details) {
-      var kids = details.querySelectorAll(':scope > .genre-tree__list > .genre-tree__item');
+    if (list) {
+      var kids = list.querySelectorAll(':scope > .genre-tree__item');
       for (var i = 0; i < kids.length; i++) {
         if (filterItem(kids[i], q, parentMatched || selfMatch)) childMatch = true;
       }
-      if (q) details.open = childMatch;
+      if (q) setOpen(li, childMatch);
     }
     li.hidden = !(!q || parentMatched || selfMatch || childMatch);
     li.classList.toggle('is-match', selfMatch);
@@ -176,8 +222,8 @@
     if (q && !searching) {
       // Snapshot accordion state to restore it when the search is cleared
       savedOpen = [];
-      tree.querySelectorAll('details.genre-tree__details').forEach(function (d) {
-        savedOpen.push([d, d.open]);
+      tree.querySelectorAll('.genre-tree__item--parent').forEach(function (d) {
+        savedOpen.push([d, isOpen(d)]);
       });
     }
     searching = !!q;
@@ -187,7 +233,7 @@
       if (filterItem(roots[i], q)) any = true;
     }
     if (!q && savedOpen) {
-      savedOpen.forEach(function (pair) { pair[0].open = pair[1]; });
+      savedOpen.forEach(function (pair) { setOpen(pair[0], pair[1]); });
       savedOpen = null;
     }
     tree.classList.toggle('is-filtered', searching);
@@ -200,8 +246,16 @@
       if (e.key === 'Enter') {
         // Never submit the filter form from the search box
         e.preventDefault();
-        var first = tree && tree.querySelector('.genre-tree__item:not([hidden]) .genre-tree__link, .genre-tree__item:not([hidden]) .genre-tree__summary');
-        if (first) first.focus();
+        // First visible match, else the first visible genre
+        var target = null;
+        ['.is-match > .genre-tree__link, .is-match > .genre-tree__row > .genre-tree__link', '.genre-tree__link'].some(function (q) {
+          var links = tree ? tree.querySelectorAll(q) : [];
+          for (var i = 0; i < links.length; i++) {
+            if (links[i].offsetParent !== null) { target = links[i]; return true; }
+          }
+          return false;
+        });
+        if (target) target.focus();
       } else if (e.key === 'Escape' && searchInput.value) {
         e.preventDefault();
         e.stopPropagation(); // keep the drawer open
@@ -212,6 +266,12 @@
   }
 
   // ── Mobile drawer ──
+  // Everything outside the drawer that must not take focus while it is open (F8)
+  function outsideDrawer() {
+    return [mainContent, document.querySelector('.mobile-bar'), document.querySelector('body > .skip-link')]
+      .filter(Boolean);
+  }
+
   function isDrawerOpen() {
     return sidebar.classList.contains('is-open');
   }
@@ -225,7 +285,7 @@
     document.querySelectorAll('[aria-controls="sidebar"]').forEach(function (b) {
       b.setAttribute('aria-expanded', 'true');
     });
-    if (mainContent) mainContent.setAttribute('inert', '');
+    outsideDrawer().forEach(function (el) { el.setAttribute('inert', ''); });
     lastOpener = opener || document.querySelector('.mobile-bar__menu');
     if (instant) {
       requestAnimationFrame(function () {
@@ -242,7 +302,7 @@
     document.querySelectorAll('[aria-controls="sidebar"]').forEach(function (b) {
       b.setAttribute('aria-expanded', 'false');
     });
-    if (mainContent) mainContent.removeAttribute('inert');
+    outsideDrawer().forEach(function (el) { el.removeAttribute('inert'); });
     var st = readState();
     st.open = false;
     writeState(st);
@@ -269,6 +329,32 @@
       if (modal && modal.hasAttribute('open')) return; // auth modal closes first
       closeDrawer();
     }
+  });
+  // Focus trap (F8): Tab / Shift+Tab wrap inside the open auth modal, else the
+  // open drawer, instead of escaping to the browser chrome or hidden controls.
+  var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), ' +
+                  'select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  function trapTab(container, e) {
+    var items = Array.prototype.filter.call(container.querySelectorAll(FOCUSABLE), function (el) {
+      return el.tabIndex >= 0 && el.getClientRects().length > 0 && !el.closest('[inert]');
+    });
+    if (!items.length) return;
+    var first = items[0];
+    var last = items[items.length - 1];
+    var active = document.activeElement;
+    if (e.shiftKey && (active === first || !container.contains(active))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && (active === last || !container.contains(active))) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Tab') return;
+    var modal = document.getElementById('auth-modal');
+    if (modal && modal.hasAttribute('open')) trapTab(modal, e);
+    else if (isDrawerOpen() && DRAWER_MQ.matches) trapTab(sidebar, e);
   });
   // Leaving drawer mode (rotate / resize to desktop) must not leave the page inert
   DRAWER_MQ.addEventListener('change', function (e) {

@@ -28,7 +28,7 @@
     <a href="/admin/" class="mobile-bar__admin-link">Админ</a>
     {% endif %}
     <div class="sort-control sort-control--mobile">
-      <select id="toolbar-sort-mobile" class="sort-select" aria-label="Сортировка">
+      <select id="toolbar-sort-mobile" class="sort-select" aria-label="Сортировка" autocomplete="off">
         <option value="release_date_desc"{{ ' selected' if not settings or settings.sort == 'release_date_desc' }}>По новизне</option>
         <option value="rating_avg_desc"{{ ' selected' if settings and settings.sort == 'rating_avg_desc' }}>По рейтингу</option>
         <option value="rating_count_desc"{{ ' selected' if settings and settings.sort == 'rating_count_desc' }}>По количеству голосов</option>
@@ -78,11 +78,11 @@
         })();
       </script>
 
-      <form id="filter-form" method="get" action="{{ url_for('catalog.index') }}">
+      <form id="filter-form" method="get" action="{{ url_for('catalog.index') }}" autocomplete="off">
       <input type="hidden" id="genre-id-input" name="genre_id" value="{{ selected_genre_id or '' }}">
       <input type="hidden" name="_submit" value="1">
-      <input type="hidden" id="excluded-narrators-json" name="excluded_narrators_json" value="{{ settings.excluded_narrators | tojson if settings and settings.excluded_narrators else '[]' }}">
-      <input type="hidden" id="excluded-authors-json" name="excluded_authors_json" value="{{ settings.excluded_authors | tojson if settings and settings.excluded_authors else '[]' }}">
+      <input type="hidden" id="excluded-narrators-json" name="excluded_narrators_json" value='{{ settings.excluded_narrators | tojson if settings and settings.excluded_narrators else "[]" }}'>
+      <input type="hidden" id="excluded-authors-json" name="excluded_authors_json" value='{{ settings.excluded_authors | tojson if settings and settings.excluded_authors else "[]" }}'>
       <input type="hidden" id="f-sort-hidden" name="sort" value="{{ settings.sort if settings and settings.sort else 'release_date_desc' }}">
 
       {# ── Tab panel 1: Genre tree (panel is the only scroll container) ── #}
@@ -96,23 +96,31 @@
       <nav class="genre-tree" aria-label="Дерево жанров">
         {# 8.17 Sidebar skip link (switches to the "Фильтры" tab) #}
         <a href="#filter-section" class="skip-link skip-link--sidebar" data-sidebar-tab="filters">Перейти к фильтрам</a>
-        {% macro render_genres(items, depth=0) %}
-        <ul class="genre-tree__list" data-depth="{{ depth }}">
+        {% macro render_genres(items, depth=0, list_id=None, collapsed=False) %}
+        <ul class="genre-tree__list" data-depth="{{ depth }}"{% if list_id %} id="{{ list_id }}"{% endif %}{{ ' hidden' if collapsed }}>
           {% for g in items %}
+          {% if g.children %}
+          {# Parent genre: the chevron button expands/collapses, the name button selects #}
+          {% set is_open = g.id in open_genre_ids %}
+          <li class="genre-tree__item genre-tree__item--parent{{ ' is-open' if is_open }}">
+            <div class="genre-tree__row">
+              <button type="button" class="genre-tree__toggle"
+                      aria-expanded="{{ 'true' if is_open else 'false' }}" aria-controls="genre-sub-{{ g.id }}"
+                      aria-label="Подразделы: {{ g.name }}"></button>
+              <button type="button"
+                 class="genre-tree__link genre-tree__link--parent{{ ' is-active' if g.id == selected_genre_id }}"
+                 data-genre-id="{{ g.id }}"{{ ' aria-current=true' if g.id == selected_genre_id }}>{{ g.name }}</button>
+            </div>
+            {{ render_genres(g.children, depth + 1, 'genre-sub-%s'|format(g.id), not is_open) }}
+          </li>
+          {% else %}
           <li class="genre-tree__item">
-            {% if g.children %}
-            <details class="genre-tree__details"{{ ' open' if g.id in open_genre_ids }}>
-              <summary class="genre-tree__summary{{ ' is-active' if g.id == selected_genre_id }}"
-                       data-genre-id="{{ g.id }}"{{ ' aria-current=true' if g.id == selected_genre_id }}>{{ g.name }}</summary>
-              {{ render_genres(g.children, depth + 1) }}
-            </details>
-            {% else %}
             {# 8.19 Genre items: use <button> semantics #}
             <button type="button"
                class="genre-tree__link{{ ' is-active' if g.id == selected_genre_id }}"
                data-genre-id="{{ g.id }}"{{ ' aria-current=true' if g.id == selected_genre_id }}>{{ g.name }}</button>
-            {% endif %}
           </li>
+          {% endif %}
           {% endfor %}
         </ul>
         {% endmacro %}
@@ -151,11 +159,11 @@
             <div class="f-inline-pair f-inline-pair--compact">
               <div class="f-control">
                 <label for="f-series-min" title="Минимальное количество книг в серии">Размер от</label>
-                <input type="number" id="f-series-min" name="series_min" min="2" value="{{ settings.series_min if settings and settings.series_min else 2 }}">
+                <input type="number" id="f-series-min" name="series_min" min="2" max="10000" value="{{ settings.series_min if settings and settings.series_min else 2 }}">
               </div>
               <div class="f-control">
                 <label for="f-series-max" title="Максимальное количество книг в серии">до</label>
-                <input type="number" id="f-series-max" name="series_max" min="2" placeholder="—"{{ ' value=%d'|format(settings.series_max) if settings and settings.series_max }}>
+                <input type="number" id="f-series-max" name="series_max" min="2" max="10000" placeholder="—"{{ ' value=%d'|format(settings.series_max) if settings and settings.series_max }}>
               </div>
             </div>
           </div>
@@ -236,17 +244,20 @@
             </div>
             <div class="f-control">
               <label for="f-rating-count-min" title="Минимальное количество голосов (оценок)">Голоса</label>
-              <input type="number" id="f-rating-count-min" name="rating_count_min" min="0" step="1" placeholder="0"{{ ' value=%d'|format(settings.rating_count_min) if settings and settings.rating_count_min is not none }}>
+              <input type="number" id="f-rating-count-min" name="rating_count_min" min="0" max="10000000" step="1" placeholder="0"{{ ' value=%d'|format(settings.rating_count_min) if settings and settings.rating_count_min is not none }}>
             </div>
           </div>
         </div>
 
         {# ─── Игнор-лист ─── #}
-        {% if ignored_count is defined and ignored_count > 0 %}
-        <span class="sidebar__section">Игнор-лист</span>
-        <div class="sidebar__filter-body">
-          <p class="sidebar__filter-note">В игноре: {{ ignored_count }} {{ 'книга' if ignored_count == 1 else ('книги' if ignored_count < 5 else 'книг') }}</p>
-          <button type="button" class="btn-sidebar-sm" id="clear-ignored-btn">Очистить список</button>
+        {% if ignored_count is defined %}
+        {# Rendered even when empty (hidden) so an ignore can reveal it without a reload #}
+        <div class="sidebar__ignore" id="ignore-section" data-ignored-count="{{ ignored_count }}"{{ ' hidden' if ignored_count == 0 }}>
+          <span class="sidebar__section">Игнор-лист</span>
+          <div class="sidebar__filter-body">
+            <p class="sidebar__filter-note" id="ignored-count-note">В игноре: {{ ignored_count }} {{ m.plural(ignored_count, 'книга', 'книги', 'книг') }}</p>
+            <button type="button" class="btn-sidebar-sm" id="clear-ignored-btn">Очистить список</button>
+          </div>
         </div>
         {% endif %}
 
@@ -260,7 +271,7 @@
             <span class="auth-user__email" title="{{ auth_email }}">{{ auth_email }}</span>
             <button type="button" class="auth-user__logout" id="auth-logout-btn" title="Выйти">&#10005;</button>
             <span class="auth-user__state">Сессия истекла</span>
-            <button type="button" class="btn-auth-login btn-auth-login--compact" id="auth-open-btn" onclick="openAuthModal()">Войти снова</button>
+            <button type="button" class="btn-auth-login btn-auth-login--compact" id="auth-open-btn" data-open-auth>Войти снова</button>
           </div>
           {% elif is_authenticated %}
           <div class="auth-user" id="auth-user-badge">
@@ -268,7 +279,7 @@
             <button type="button" class="auth-user__logout" id="auth-logout-btn" title="Выйти">&#10005;</button>
           </div>
           {% else %}
-          <button type="button" class="btn-auth-login" id="auth-open-btn" onclick="openAuthModal()">
+          <button type="button" class="btn-auth-login" id="auth-open-btn" data-open-auth>
             Войти в ЛитРес
           </button>
           {% endif %}
@@ -277,7 +288,7 @@
             <input type="checkbox" id="f-hide-listened" name="hide_listened"
                    {{ 'checked' if settings and settings.hide_listened }}
                    {{ 'disabled' if not is_authenticated }}
-                   onchange="autoSubmit()">
+                   data-auto-submit>
             <label for="f-hide-listened">Скрыть прослушанные</label>
             {% if is_authenticated %}
             <span class="f-badge-count">{{ listened_count }}</span>
@@ -288,7 +299,7 @@
             <input type="checkbox" id="f-incomplete-series" name="incomplete_series_only"
                    {{ 'checked' if settings and settings.incomplete_series_only }}
                    {{ 'disabled' if not is_authenticated }}
-                   onchange="autoSubmit()">
+                   data-auto-submit>
             <label for="f-incomplete-series">Незавершённые серии</label>
           </div>
 
@@ -319,10 +330,9 @@
         <p class="page-notice__text">{{ auth_notice }}</p>
         <div class="page-notice__actions">
           {% if auth_expired %}
-          <button type="button" class="page-notice__action" onclick="openAuthModal()">Войти снова</button>
+          <button type="button" class="page-notice__action" data-open-auth>Войти снова</button>
           {% endif %}
-          <button type="button" class="page-notice__close" aria-label="Скрыть уведомление"
-                  onclick="this.closest('.page-notice').remove()">&times;</button>
+          <button type="button" class="page-notice__close" aria-label="Скрыть уведомление" data-dismiss-notice>&times;</button>
         </div>
       </div>
       {% endif %}
@@ -335,7 +345,7 @@
           </h1>
           <div class="sort-control sort-control--desktop">
             <label for="toolbar-sort" class="sort-control__label">Сортировка:</label>
-            <select id="toolbar-sort" class="sort-select">
+            <select id="toolbar-sort" class="sort-select" autocomplete="off">
               <option value="release_date_desc"{{ ' selected' if not settings or settings.sort == 'release_date_desc' }}>По новизне</option>
               <option value="rating_avg_desc"{{ ' selected' if settings and settings.sort == 'rating_avg_desc' }}>По рейтингу</option>
               <option value="rating_count_desc"{{ ' selected' if settings and settings.sort == 'rating_count_desc' }}>По количеству голосов</option>
@@ -355,17 +365,19 @@
       <h2 class="auth-modal__title" id="auth-modal-title">Вход в ЛитРес</h2>
       <button type="button" class="auth-modal__close" id="auth-modal-close" aria-label="Закрыть">&times;</button>
     </div>
-    <div class="auth-modal__body">
-      <input type="email" class="auth-modal__input" id="auth-email"
-             placeholder="Email" autocomplete="email" value="{{ auth_email if auth_expired and auth_email else '' }}">
-      <input type="password" class="auth-modal__input" id="auth-password"
-             placeholder="Пароль" autocomplete="current-password">
-      <p class="auth-modal__error" id="auth-error"></p>
-      <button type="button" class="auth-modal__submit" id="auth-submit-btn" onclick="handleLogin()">
-        <span class="auth-spinner"></span>
+    {# A real <form>: Enter in either field submits; novalidate = our own Russian messages #}
+    <form class="auth-modal__body" id="auth-form" novalidate>
+      <input type="email" class="auth-modal__input" id="auth-email" name="email"
+             placeholder="Email" aria-label="Email" autocomplete="email" required
+             value="{{ auth_email if auth_expired and auth_email else '' }}">
+      <input type="password" class="auth-modal__input" id="auth-password" name="password"
+             placeholder="Пароль" aria-label="Пароль" autocomplete="current-password" required>
+      <p class="auth-modal__error" id="auth-error" role="alert"></p>
+      <button type="submit" class="auth-modal__submit" id="auth-submit-btn">
+        <span class="auth-spinner" aria-hidden="true"></span>
         <span class="auth-form__btn-text">Войти</span>
       </button>
-    </div>
+    </form>
   </dialog>
 
   {# Loading overlay #}
@@ -374,11 +386,64 @@
     <span class="visually-hidden">Загрузка результатов...</span>
   </div>
 
+  {# Undo / error toast for card actions (ignore) #}
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span class="toast__text" id="toast-text"></span>
+    <button type="button" class="toast__action" id="toast-action" hidden>Отменить</button>
+    <button type="button" class="toast__close" id="toast-close" aria-label="Скрыть уведомление">&times;</button>
+  </div>
+
   {# 8.23 Screen reader live region #}
   <div aria-live="polite" class="visually-hidden" id="sr-announce"></div>
 
+  <script>
+  // The server-rendered markup is the source of truth for every filter control.
+  // Browsers may restore stale form state on back/forward navigation (even with
+  // autocomplete="off" in some engines): reset each control to its default
+  // (= rendered) state before any script reads it.
+  function resetControlsToServerState() {
+    var sel = '#filter-form input, #filter-form select, #toolbar-sort, #toolbar-sort-mobile, #genre-search, #auth-password';
+    document.querySelectorAll(sel).forEach(function(el) {
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        el.checked = el.defaultChecked;
+      } else if (el.tagName === 'SELECT') {
+        for (var i = 0; i < el.options.length; i++) el.options[i].selected = el.options[i].defaultSelected;
+      } else {
+        el.value = el.defaultValue;
+      }
+    });
+  }
+  resetControlsToServerState();
+  // Restored from the back/forward cache: the DOM is the one we left (overlay
+  // shown, chips edited, _submitting set). Reload to get the server's state.
+  window.addEventListener('pageshow', function(e) {
+    if (e.persisted) window.location.reload();
+  });
+  </script>
   <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
   <script>
+  // Russian plural form (same rules as the plural macro in _macros.html)
+  function pluralRu(n, one, few, many) {
+    var n10 = n % 10, n100 = n % 100;
+    if (n10 === 1 && n100 !== 11) return one;
+    if (n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return few;
+    return many;
+  }
+
+  // Same-origin JSON POST for page actions. Resolves to {ok, status, data};
+  // a non-JSON reply (proxy error page) gives data = {}.
+  function postAction(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body || {}),
+    }).then(function(resp) {
+      var isJson = (resp.headers.get('Content-Type') || '').indexOf('application/json') !== -1;
+      var data = isJson ? resp.json().catch(function() { return {}; }) : Promise.resolve({});
+      return data.then(function(d) { return { ok: resp.ok && !!(d && d.ok), status: resp.status, data: d || {} }; });
+    });
+  }
+
   // Screen reader announcement helper
   function announceToSR(text) {
     var el = document.getElementById('sr-announce');
@@ -515,13 +580,7 @@
     var tree = document.querySelector('.genre-tree');
     if (!tree) return;
 
-    function closeDeep(details) {
-      details.removeAttribute('open');
-      var nested = details.querySelectorAll('details.genre-tree__details');
-      for (var i = 0; i < nested.length; i++) {
-        nested[i].removeAttribute('open');
-      }
-    }
+    // Expand/collapse + accordion live in static/js/sidebar.js (F12)
 
     function clearSelection() {
       tree.querySelectorAll('.is-active').forEach(function(el) {
@@ -529,19 +588,6 @@
         el.removeAttribute('aria-current');
       });
     }
-
-    tree.querySelectorAll('.genre-tree__details').forEach(function(det) {
-      det.addEventListener('toggle', function() {
-        if (!this.open) return;
-        // Genre search expands many branches at once: skip the accordion then
-        if (window.SidebarUI && window.SidebarUI.isSearching()) return;
-        var list = this.parentElement.parentElement;
-        var siblings = list.querySelectorAll(':scope > .genre-tree__item > .genre-tree__details');
-        for (var i = 0; i < siblings.length; i++) {
-          if (siblings[i] !== this) closeDeep(siblings[i]);
-        }
-      });
-    });
 
     var filterForm = document.getElementById('filter-form');
     var genreInput = document.getElementById('genre-id-input');
@@ -555,28 +601,11 @@
       navigateWithCleanUrl();
     }
 
-    // Genre leaf buttons
+    // Genre name buttons (leaves and parents): select the genre
     tree.querySelectorAll('.genre-tree__link').forEach(function(link) {
       link.addEventListener('click', function(e) {
         e.preventDefault();
         submitWithGenre(this.dataset.genreId);
-      });
-    });
-
-    // Bug #15: Parent genre summaries are also selectable
-    tree.querySelectorAll('.genre-tree__summary').forEach(function(summary) {
-      summary.addEventListener('click', function(e) {
-        // Only navigate if clicking the text, not the arrow area
-        // Use a small delay to let <details> toggle first, then submit
-        var genreId = this.dataset.genreId;
-        if (genreId) {
-          // Prevent the default toggle behavior, navigate instead
-          e.preventDefault();
-          var det = this.parentElement;
-          // Open the details to show children, and also navigate to this genre
-          det.setAttribute('open', '');
-          submitWithGenre(genreId);
-        }
       });
     });
 
@@ -796,9 +825,22 @@
     var clearBtn = document.getElementById('clear-ignored-btn');
     if (!clearBtn) return;
     clearBtn.addEventListener('click', function() {
-      fetch('{{ url_for("catalog.clear_ignored") }}', { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function() { location.reload(); });
+      var section = document.getElementById('ignore-section');
+      var n = section ? parseInt(section.getAttribute('data-ignored-count'), 10) || 0 : 0;
+      var question = 'Очистить игнор-лист' + (n ? ' (' + n + ' ' + pluralRu(n, 'книга', 'книги', 'книг') + ')' : '') +
+                     '? Все скрытые книги снова появятся в каталоге.';
+      if (!window.confirm(question)) return;
+      clearBtn.disabled = true;
+      postAction('{{ url_for("catalog.clear_ignored") }}')
+        .then(function(r) {
+          if (r.ok) { location.reload(); return; }
+          clearBtn.disabled = false;
+          showToast('Не удалось очистить игнор-лист. Попробуйте ещё раз.');
+        })
+        .catch(function() {
+          clearBtn.disabled = false;
+          showToast('Нет связи с сервером. Игнор-лист не очищен.');
+        });
     });
   })();
 
@@ -820,10 +862,35 @@
     var modal = document.getElementById('auth-modal');
     var scrim = document.getElementById('auth-modal-scrim');
     if (!modal || !scrim) return;
-    modal.close ? modal.close() : modal.removeAttribute('open');
+    if (modal.open) { modal.close ? modal.close() : modal.removeAttribute('open'); }
     scrim.classList.remove('is-visible');
     var errorEl = document.getElementById('auth-error');
-    if (errorEl) errorEl.classList.remove('is-visible');
+    if (errorEl) { errorEl.classList.remove('is-visible'); errorEl.textContent = ''; }
+    // Never keep a typed password around after the modal is dismissed
+    var pwInput = document.getElementById('auth-password');
+    if (pwInput) { pwInput.value = ''; pwInput.removeAttribute('aria-invalid'); }
+    var emailInput = document.getElementById('auth-email');
+    if (emailInput) emailInput.removeAttribute('aria-invalid');
+  }
+
+  var AUTH_MSG = {
+    empty: 'Введите email и пароль',
+    rejected: 'Неверный email или пароль',
+    unavailable: 'ЛитРес недоступен, попробуйте позже',
+    network: 'Нет связи с сервером. Проверьте подключение и попробуйте ещё раз',
+    generic: 'Не удалось войти. Попробуйте позже',
+  };
+
+  // Map a failed /auth/login reply to Russian copy. Server text is shown only
+  // when it is already Russian; raw English / exception text never reaches the UI.
+  function loginErrorMessage(status, data) {
+    var err = (data && typeof data.error === 'string') ? data.error : '';
+    if (/[А-Яа-яЁё]/.test(err)) return err;
+    if (status === 400) return AUTH_MSG.empty;
+    if (/connection error|timeout|HTTP 5\d\d/i.test(err)) return AUTH_MSG.unavailable;
+    if (status === 401 || status === 403) return AUTH_MSG.rejected;
+    if (status >= 500 || status === 0) return AUTH_MSG.unavailable;
+    return AUTH_MSG.generic;
   }
 
   function handleLogin() {
@@ -831,11 +898,27 @@
     var passwordInput = document.getElementById('auth-password');
     var submitBtn = document.getElementById('auth-submit-btn');
     var errorEl = document.getElementById('auth-error');
-    if (!emailInput || !submitBtn) return;
+    if (!emailInput || !passwordInput || !submitBtn || submitBtn.disabled) return;
     var email = emailInput.value.trim();
     var password = passwordInput.value.trim();
 
-    if (!email || !password) return;
+    function showError(text, field) {
+      errorEl.textContent = text;
+      errorEl.classList.add('is-visible');
+      if (field) { field.setAttribute('aria-invalid', 'true'); field.focus(); }
+    }
+    function resetButton() {
+      submitBtn.disabled = false;
+      submitBtn.classList.remove('auth-modal__submit--loading');
+      submitBtn.querySelector('.auth-form__btn-text').textContent = 'Войти';
+    }
+
+    emailInput.removeAttribute('aria-invalid');
+    passwordInput.removeAttribute('aria-invalid');
+    if (!email || !password) {
+      showError(AUTH_MSG.empty, !email ? emailInput : passwordInput);
+      return;
+    }
 
     submitBtn.disabled = true;
     submitBtn.classList.add('auth-modal__submit--loading');
@@ -847,60 +930,84 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email, password: password }),
     })
-      .then(function(resp) { return resp.json().then(function(d) { return { status: resp.status, data: d }; }); })
+      .then(function(resp) {
+        // A proxy / gunicorn timeout returns HTML: do not treat that as a network error
+        var isJson = (resp.headers.get('Content-Type') || '').indexOf('application/json') !== -1;
+        var body = isJson ? resp.json().catch(function() { return {}; }) : Promise.resolve({});
+        return body.then(function(d) { return { ok: resp.ok, status: resp.status, data: d || {} }; });
+      })
       .then(function(result) {
-        if (result.data.ok) {
+        if (result.ok && result.data.ok) {
           closeAuthModal();
           window.location.reload();
-        } else {
-          errorEl.textContent = result.data.error || 'Ошибка входа';
-          errorEl.classList.add('is-visible');
-          submitBtn.disabled = false;
-          submitBtn.classList.remove('auth-modal__submit--loading');
-          submitBtn.querySelector('.auth-form__btn-text').textContent = 'Войти';
+          return;
         }
+        resetButton();
+        var field = result.status === 401 ? passwordInput : null;
+        showError(loginErrorMessage(result.status, result.data), field);
       })
       .catch(function() {
-        errorEl.textContent = 'Ошибка сети';
-        errorEl.classList.add('is-visible');
-        submitBtn.disabled = false;
-        submitBtn.classList.remove('auth-modal__submit--loading');
-        submitBtn.querySelector('.auth-form__btn-text').textContent = 'Войти';
+        resetButton();
+        showError(AUTH_MSG.network);
       });
-
   }
 
-  // ── Auth modal: close, Escape, Enter ──
+  // ── Auth modal: submit, close, Escape ──
   (function() {
+    var form = document.getElementById('auth-form');
+    var modal = document.getElementById('auth-modal');
     var closeBtn = document.getElementById('auth-modal-close');
     var scrim = document.getElementById('auth-modal-scrim');
+    if (form) form.addEventListener('submit', function(e) { e.preventDefault(); handleLogin(); });
     if (closeBtn) closeBtn.addEventListener('click', closeAuthModal);
     if (scrim) scrim.addEventListener('click', closeAuthModal);
+    // Native Esc ("cancel") or any other close path: also hide the scrim
+    if (modal) modal.addEventListener('close', closeAuthModal);
 
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        var modal = document.getElementById('auth-modal');
-        if (modal && modal.hasAttribute('open')) closeAuthModal();
+      if (e.key === 'Escape' && modal && modal.hasAttribute('open')) {
+        e.preventDefault();
+        closeAuthModal();
       }
     });
-
-    var pwInput = document.getElementById('auth-password');
-    if (pwInput) {
-      pwInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') { e.preventDefault(); handleLogin(); }
-      });
-    }
   })();
 
   // ── Auth: Logout ──
   var logoutBtn = document.getElementById('auth-logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', function() {
-      fetch('/auth/logout', { method: 'POST' })
+      postAction('/auth/logout')
         .then(function() { window.location.reload(); })
         .catch(function() { window.location.reload(); });
     });
   }
+
+  // ── Delegated handlers (replace inline on*= attributes) ──
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('[data-open-auth]')) { openAuthModal(); return; }
+    var dismiss = e.target.closest('[data-dismiss-notice]');
+    if (dismiss) { var notice = dismiss.closest('.page-notice'); if (notice) notice.remove(); }
+  });
+  document.querySelectorAll('[data-auto-submit]').forEach(function(el) {
+    el.addEventListener('change', function() { autoSubmit(); });
+  });
+  // Broken cover → placeholder (error events do not bubble: listen in the capture phase,
+  // and fix covers that already failed before this script ran)
+  (function() {
+    var placeholder = '{{ url_for("static", filename="img/cover-placeholder.svg") }}';
+    function useFallback(img) {
+      if (img.dataset.fallback) return;
+      img.dataset.fallback = '1';
+      img.src = placeholder;
+    }
+    document.addEventListener('error', function(e) {
+      var img = e.target;
+      if (img && img.tagName === 'IMG' && img.classList.contains('book-card__cover')) useFallback(img);
+    }, true);
+    document.querySelectorAll('img.book-card__cover').forEach(function(img) {
+      if (img.complete && img.naturalWidth === 0 && img.getAttribute('src')) useFallback(img);
+    });
+  })();
 
   // ── Auth: Disabled filter click → open login modal ──
   document.querySelectorAll('[data-auth-required]').forEach(function(el) {
@@ -910,44 +1017,123 @@
     });
   });
 
-  // ── 9.4 Ignore button — optimistic hide ──
+  // ── Toast (undo / error) ──
+  var _toastTimer = null;
+  function hideToast() {
+    var toast = document.getElementById('toast');
+    if (toast) toast.hidden = true;
+    if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+  }
+  // showToast(text[, actionLabel, onAction]) — auto-hides after 8 s
+  function showToast(text, actionLabel, onAction) {
+    var toast = document.getElementById('toast');
+    if (!toast) return;
+    var action = document.getElementById('toast-action');
+    document.getElementById('toast-text').textContent = text;
+    if (actionLabel && onAction) {
+      action.textContent = actionLabel;
+      action.hidden = false;
+      action.disabled = false;
+      action.onclick = function() { action.disabled = true; onAction(); };
+    } else {
+      action.hidden = true;
+      action.onclick = null;
+    }
+    toast.hidden = false;
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(hideToast, 8000);
+  }
+  (function() {
+    var closeBtn = document.getElementById('toast-close');
+    if (closeBtn) closeBtn.addEventListener('click', hideToast);
+  })();
+
+  // ── Result counters (toolbar, drawer footer, ignore list) after an ignore ──
+  var CATALOG_STATE = {
+    total: {{ total_count if total_count is defined and total_count is number else 'null' }},
+    forms: {{ (['серия', 'серии', 'серий'] if settings and settings.series_only else (['книга', 'книги', 'книг'] if settings and settings.standalones_only else ['результат', 'результата', 'результатов'])) | tojson }},
+  };
+  function countText(n) {
+    return n + ' ' + pluralRu(n, CATALOG_STATE.forms[0], CATALOG_STATE.forms[1], CATALOG_STATE.forms[2]);
+  }
+  function onCardIgnored(booksAdded) {
+    if (CATALOG_STATE.total !== null && CATALOG_STATE.total > 0) {
+      CATALOG_STATE.total -= 1;
+      document.querySelectorAll('.results-meta, .sidebar__show-count').forEach(function(el) {
+        el.textContent = countText(CATALOG_STATE.total);
+      });
+    }
+    var section = document.getElementById('ignore-section');
+    if (section && booksAdded > 0) {
+      var n = (parseInt(section.getAttribute('data-ignored-count'), 10) || 0) + booksAdded;
+      section.setAttribute('data-ignored-count', String(n));
+      document.getElementById('ignored-count-note').textContent =
+        'В игноре: ' + n + ' ' + pluralRu(n, 'книга', 'книги', 'книг');
+      section.hidden = false;
+    }
+  }
+
+  // ── 9.4 Ignore button — optimistic hide, undo toast, revert on failure ──
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.btn-ignore');
     if (!btn) return;
 
     var card = btn.closest('.book-card');
-    if (!card) return;
+    if (!card || card.dataset.ignoring) return;
 
     var artId = btn.dataset.artId;
     var seriesId = btn.dataset.seriesId;
+    var titleEl = card.querySelector('.book-card__title');
+    var title = titleEl ? titleEl.textContent.trim() : '';
+    var url, undoUrl;
+    if (artId) {
+      url = '/ignore/' + artId;
+      undoUrl = '/unignore/' + artId;
+    } else if (seriesId) {
+      url = '/ignore/series/' + seriesId;
+      undoUrl = '/unignore/series/' + seriesId;
+    }
+    if (!url) return;
 
     // Optimistic hide with animation
+    card.dataset.ignoring = '1';
     card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
     card.style.opacity = '0';
     card.style.transform = 'scale(0.9)';
 
-    var url;
-    if (artId) {
-      url = '/ignore/' + artId;
-    } else if (seriesId) {
-      url = '/ignore/series/' + seriesId;
+    function revert(message) {
+      delete card.dataset.ignoring;
+      card.style.opacity = '';
+      card.style.transform = '';
+      showToast(message);
+      announceToSR(message);
     }
 
-    if (url) {
-      fetch(url, { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.ok) {
-            setTimeout(function() { card.remove(); }, 300);
-            announceToSR('Добавлено в игнор-лист');
+    postAction(url)
+      .then(function(r) {
+        if (!r.ok) { revert('Не удалось добавить в игнор-лист. Попробуйте ещё раз.'); return; }
+        setTimeout(function() {
+          card.remove();
+          // Last card of the page gone: reload to show the next results and pagination
+          if (!document.querySelector('.book-grid .book-card')) {
+            if (window.SidebarUI) window.SidebarUI.persist();
+            window.location.reload();
           }
-        })
-        .catch(function() {
-          // Revert on error
-          card.style.opacity = '1';
-          card.style.transform = 'none';
+        }, 300);
+        onCardIgnored(artId ? 1 : (typeof r.data.count === 'number' ? r.data.count : 0));
+        announceToSR('Добавлено в игнор-лист');
+        showToast((seriesId ? 'Серия скрыта: ' : 'Книга скрыта: ') + title, 'Отменить', function() {
+          postAction(undoUrl)
+            .then(function(u) {
+              if (u.ok) { window.location.reload(); return; }
+              showToast('Не удалось отменить. Попробуйте ещё раз.');
+            })
+            .catch(function() { showToast('Нет связи с сервером. Отмена не выполнена.'); });
         });
-    }
+      })
+      .catch(function() {
+        revert('Нет связи с сервером. Книга не добавлена в игнор-лист.');
+      });
   });
   </script>
 </body>

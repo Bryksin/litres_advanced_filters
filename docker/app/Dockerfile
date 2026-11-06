@@ -49,7 +49,11 @@ RUN mkdir -p /app/persistent && chown -R appuser:appuser /app
 
 EXPOSE 5000
 
+# Liveness: a gunicorn worker answers a static file (no DB access, no user row).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/static/css/style.css', timeout=4)"]
+
 # Entrypoint runs as root to fix persistent/ ownership, then drops to appuser
 ENTRYPOINT ["sh", "entrypoint.sh"]
 # Production WSGI server (multi-worker); Flask dev server is single-threaded and not for production
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:create_app()"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "--timeout", "60", "--graceful-timeout", "30", "app:create_app()"]

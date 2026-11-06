@@ -1,6 +1,7 @@
 # tests/unit/test_profile_sync.py
 """Unit tests for profile sync engine — mocked scrapers, in-memory DB."""
 
+import json
 from datetime import datetime, timezone
 from unittest.mock import patch
 
@@ -27,7 +28,19 @@ def profile_db():
             language_code="ru",
             only_subscription=True,
         ))
-        s.add(User(id=1, created_at=datetime.now(timezone.utc)))
+        # A live LitRes session for the account being synced: run_profile only
+        # writes while that account is still linked (audit W4)
+        s.add(User(
+            id=1,
+            created_at=datetime.now(timezone.utc),
+            litres_login="test@example.com",
+            session_data=json.dumps({
+                "email": "test@example.com",
+                "access_token": "a",
+                "refresh_token": "r",
+                "expires_at": "2099-01-01T00:00:00+00:00",
+            }),
+        ))
         # Add some books that exist in our DB
         for bid in [100, 200, 300, 400, 500]:
             s.add(Book(
@@ -94,8 +107,8 @@ class TestRunProfile:
         mock_get_token.return_value = "fake-token"
         mock_fetch.return_value = [100, 200]
 
-        run_profile(session_factory=profile_db, email="t@e.com", password="p", user_id=1)
-        run_profile(session_factory=profile_db, email="t@e.com", password="p", user_id=1)
+        run_profile(session_factory=profile_db, email="test@example.com", password="p", user_id=1)
+        run_profile(session_factory=profile_db, email="test@example.com", password="p", user_id=1)
 
         with profile_db() as session:
             listened = session.query(UserListenedBook).all()
@@ -109,7 +122,7 @@ class TestRunProfile:
         mock_get_token.return_value = "fake-token"
         mock_fetch.return_value = [100]
 
-        run_profile(session_factory=profile_db, email="t@e.com", password="p", user_id=1)
+        run_profile(session_factory=profile_db, email="test@example.com", password="p", user_id=1)
 
         with profile_db() as session:
             runs = session.query(SyncRun).filter_by(type="profile").all()
@@ -125,7 +138,7 @@ class TestRunProfile:
         mock_get_token.side_effect = LitresAuthError("wrong password")
 
         with pytest.raises(LitresAuthError):
-            run_profile(session_factory=profile_db, email="t@e.com", password="p", user_id=1)
+            run_profile(session_factory=profile_db, email="test@example.com", password="p", user_id=1)
 
         with profile_db() as session:
             runs = session.query(SyncRun).filter_by(type="profile").all()

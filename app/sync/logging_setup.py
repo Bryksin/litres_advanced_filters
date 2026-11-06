@@ -45,3 +45,87 @@ def setup_sync_logging(sync_dir: str, run_tag: str, verbose: bool = False) -> No
     error_handler.setLevel(logging.WARNING)
     error_handler.setFormatter(fmt)
     root.addHandler(error_handler)
+
+
+# ---------------------------------------------------------------------------
+# Retention (S15): persistent/sync/ grew to 725 MB in prod (cron.log 366 MB).
+# ---------------------------------------------------------------------------
+
+LOG_RETENTION_DAYS = 14
+CRON_LOG_MAX_BYTES = 20 * 1024 * 1024
+CRON_LOG_KEEP_BYTES = 5 * 1024 * 1024
+_PRUNABLE_PREFIXES = ("sync_", "failed_books_")
+_PRUNABLE_SUFFIXES = (".log", ".jsonl")
+
+
+def _retention_days() -> int:
+    try:
+        return max(1, int(os.environ.get("SYNC_LOG_RETENTION_DAYS", LOG_RETENTION_DAYS)))
+    except ValueError:
+        return LOG_RETENTION_DAYS
+
+
+def prune_sync_logs(
+    sync_dir: str,
+    *,
+    keep_days: int | None = None,
+    cron_log_max_bytes: int = CRON_LOG_MAX_BYTES,
+    cron_log_keep_bytes: int = CRON_LOG_KEEP_BYTES,
+    now: float | None = None,
+) -> dict[str, int]:
+    """Delete per-run sync files older than ``keep_days`` and cap cron.log.
+
+    - ``sync_*.log``, ``sync_errors_*.log`` and ``failed_books_*.jsonl``
+      older than ``keep_days`` (default 14, env SYNC_LOG_RETENTION_DAYS) by
+      mtime are deleted.
+    - ``cron.log`` above ``cron_log_max_bytes``: its last
+      ``cron_log_keep_bytes`` are saved to ``cron.log.1`` (replacing it) and
+      cron.log is truncated in place. Cron appends with ``>>`` (O_APPEND), so
+      a writer that already has the file open simply continues at the new end.
+
+    Called by every ``python -m app.sync`` CLI run and at container boot.
+    Never raises for a single file; returns counts.
+    """
+    import time
+
+    stats = {"deleted": 0, "freed_bytes": 0, "cron_log_truncated": 0}
+    if not os.path.isdir(sync_dir):
+        return stats
+    days = keep_days if keep_days is not None else _retention_days()
+    cutoff = (now if now is not None else time.time()) - days * 86400
+
+    for name in os.listdir(sync_dir):
+        if not (name.startswith(_PRUNABLE_PREFIXES) and name.endswith(_PRUNABLE_SUFFIXES)):
+            continue
+        path = os.path.join(sync_dir, name)
+        try:
+            st = os.stat(path)
+            if st.st_mtime < cutoff:
+                os.remove(path)
+                stats["deleted"] += 1
+                stats["freed_bytes"] += st.st_size
+        except OSError:
+            continue
+
+    cron_log = os.path.join(sync_dir, "cron.log")
+    try:
+        size = os.path.getsize(cron_log)
+    except OSError:
+        size = 0
+    if size > cron_log_max_bytes:
+        try:
+            with open(cron_log, "rb") as src:
+                src.seek(max(0, size - cron_log_keep_bytes))
+                tail = src.read()
+            # Start the kept tail at a line boundary.
+            nl = tail.find(b"\n")
+            if 0 <= nl < len(tail) - 1:
+                tail = tail[nl + 1:]
+            with open(cron_log + ".1", "wb") as dst:
+                dst.write(tail)
+            os.truncate(cron_log, 0)
+            stats["cron_log_truncated"] = 1
+            stats["freed_bytes"] += size - len(tail)
+        except OSError:
+            pass
+    return stats

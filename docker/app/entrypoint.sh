@@ -26,18 +26,46 @@ if [ -f /app/persistent/crontab ]; then
         echo "  Migrating: rewriting bare python to /usr/local/bin/python"
         sed -i 's|&& python -m|\&\& /usr/local/bin/python -m|g' /app/persistent/crontab
     fi
-
-    crontab -u appuser /app/persistent/crontab
 else
     echo "  First boot: copying default crontab to /app/persistent/crontab"
     cp /app/crontab /app/persistent/crontab
     chown appuser:appuser /app/persistent/crontab
-    crontab -u appuser /app/persistent/crontab
 fi
-cron
+
+# W14: cron starts jobs with an empty environment. The container's settings
+# are written as VAR=value lines to an appuser-only header file outside the
+# volume (no secrets on persistent/) and prepended when the crontab is
+# installed. The admin cron editor must install "$CRON_ENV_FILE + crontab"
+# too, or edited jobs lose the header until the next restart. Values with a
+# newline or '%' are skipped: crontab cannot express them safely.
+CRON_ENV_FILE=/app/.cron-env
+umask 077
+{
+    for v in DATABASE_URI SECRET_KEY LITRES_EMAIL LITRES_PASSWORD ADMIN_EMAILS SYNC_LOG_RETENTION_DAYS; do
+        eval "val=\${$v-}"
+        [ -z "$val" ] && continue
+        case "$val" in
+            *%*|*"
+"*) echo "  Skipping $v in cron env (unsupported character)" >&2; continue ;;
+        esac
+        printf '%s=%s\n' "$v" "$val"
+    done
+} > "$CRON_ENV_FILE"
+umask 022
+chown appuser:appuser "$CRON_ENV_FILE"
+cat "$CRON_ENV_FILE" /app/persistent/crontab | crontab -u appuser -
 
 echo "Applying database migrations..."
 gosu appuser python -m alembic upgrade head
+
+# No sync can be alive before cron and gunicorn start: mark leftover 'running'
+# sync_run rows failed (they would block that night's cron sync) and apply log
+# retention (old per-run logs, cron.log cap). Non-fatal.
+echo "Boot cleanup (stale sync runs, log retention)..."
+gosu appuser python -m app.sync boot-cleanup || echo "  boot-cleanup failed (ignored)"
+
+# Start cron only after migrations + cleanup so a midnight job never races them.
+cron
 
 echo "Starting app server..."
 exec gosu appuser "$@"

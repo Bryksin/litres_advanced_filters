@@ -134,12 +134,26 @@ def get_sync_config(session: Session) -> SyncConfig:
     return config
 
 
+# Sync types that crawl the catalog and must not run concurrently. Profile
+# syncs (per-user, short, started from web threads) never block them (W3).
+CATALOG_SYNC_TYPES = ("bulk", "delta")
+# A profile sync fetches at most 50 pages; one older than this is dead.
+PROFILE_ZOMBIE_SECONDS = 15 * 60
+# A catalog run bumps heartbeat_at on every committed page (worst case a page
+# waits 16 min in 5xx retries); no heartbeat for this long means it is dead.
+CATALOG_HEARTBEAT_STALE_SECONDS = 2 * 3600
+
+
 def reap_zombie_sync_runs(session: Session, *, timeout_seconds: int = 24 * 3600) -> int:
     """Mark crashed-but-still-'running' sync_run rows as failed.
 
-    A row is considered a zombie if either:
-      - ``finished_at`` is populated (process set it but never updated status), or
-      - ``started_at`` is older than ``timeout_seconds`` (process is gone).
+    A row is considered a zombie if any of:
+      - ``finished_at`` is populated (process set it but never updated status);
+      - it is a ``profile`` run started more than PROFILE_ZOMBIE_SECONDS ago
+        (its web thread died with a gunicorn worker);
+      - it is a catalog run whose last heartbeat (or start, if it never
+        committed a page) is older than CATALOG_HEARTBEAT_STALE_SECONDS;
+      - ``started_at`` is older than ``timeout_seconds`` (any type).
 
     Idempotent and safe to call from multiple entry points (app startup,
     pre-sync check). Returns the number of rows reaped.
@@ -148,37 +162,67 @@ def reap_zombie_sync_runs(session: Session, *, timeout_seconds: int = 24 * 3600)
     now = datetime.now(timezone.utc)
     reaped = 0
 
+    def _reap(run: SyncRun, reason: str) -> None:
+        nonlocal reaped
+        run.status = "failed"
+        if run.finished_at is None:
+            run.finished_at = now
+        run.error_message = f"Auto-recovered: {reason}"
+        log.warning("Reaped zombie SyncRun id=%d (type=%s): %s", run.id, run.type, reason)
+        reaped += 1
+
     for run in running_rows:
+        age = (now - run.started_at).total_seconds() if run.started_at else 0
         if run.finished_at is not None:
-            run.status = "failed"
-            run.error_message = (
-                "Auto-recovered: process crashed after setting finished_at"
-            )
-            log.warning(
-                "Reaped zombie SyncRun id=%d: finished_at was set but status was still 'running'",
-                run.id,
-            )
-            reaped += 1
-        elif run.started_at and (now - run.started_at).total_seconds() > timeout_seconds:
-            run.status = "failed"
-            run.error_message = f"Auto-recovered: sync exceeded {timeout_seconds // 3600}h timeout"
-            log.warning(
-                "Reaped zombie SyncRun id=%d: started_at=%s exceeded %dh timeout",
-                run.id,
-                run.started_at,
-                timeout_seconds // 3600,
-            )
-            reaped += 1
+            _reap(run, "process crashed after setting finished_at")
+        elif age > timeout_seconds:
+            _reap(run, f"sync exceeded {timeout_seconds // 3600}h timeout")
+        elif run.type == "profile" and age > PROFILE_ZOMBIE_SECONDS:
+            _reap(run, f"profile sync older than {PROFILE_ZOMBIE_SECONDS // 60} min")
+        elif run.type in CATALOG_SYNC_TYPES and (
+            now - (run.heartbeat_at or run.started_at or now)
+        ).total_seconds() > CATALOG_HEARTBEAT_STALE_SECONDS:
+            _reap(run, f"no heartbeat for {CATALOG_HEARTBEAT_STALE_SECONDS // 3600}h")
 
     if reaped:
         session.commit()
     return reaped
 
 
-def check_no_running_sync(session: Session) -> None:
-    reap_zombie_sync_runs(session)
+def reap_all_running_sync_runs(session: Session) -> int:
+    """Container boot only (S8): no sync process can be alive yet, so every
+    ``running`` row is a leftover of the previous container. Call before cron
+    and gunicorn start."""
+    rows = session.query(SyncRun).filter_by(status="running").all()
+    now = datetime.now(timezone.utc)
+    for run in rows:
+        run.status = "failed"
+        run.finished_at = run.finished_at or now
+        run.error_message = "Auto-recovered: container restarted while running"
+        log.warning("Boot: reaped SyncRun id=%d (type=%s)", run.id, run.type)
+    if rows:
+        session.commit()
+    return len(rows)
 
-    still_running = session.query(SyncRun).filter_by(status="running").first()
+
+def find_running_catalog_sync(session: Session, *, exclude_id: int | None = None) -> SyncRun | None:
+    """Return a live bulk/delta run, after reaping zombies (W3).
+
+    Use for every "is a catalog sync running?" guard (cron, admin start
+    button). Profile runs are ignored. ``exclude_id`` skips a row the caller
+    owns (run_bulk adopting a pre-inserted row, W13).
+    """
+    reap_zombie_sync_runs(session)
+    q = session.query(SyncRun).filter(
+        SyncRun.status == "running", SyncRun.type.in_(CATALOG_SYNC_TYPES)
+    )
+    if exclude_id is not None:
+        q = q.filter(SyncRun.id != exclude_id)
+    return q.first()
+
+
+def check_no_running_sync(session: Session) -> None:
+    still_running = find_running_catalog_sync(session)
     if still_running:
         raise RuntimeError(
             f"Sync already running: SyncRun id={still_running.id} started at {still_running.started_at}. "

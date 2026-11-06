@@ -1,7 +1,7 @@
 """Admin panel blueprint — protected by ADMIN_EMAILS allowlist.
 
 Provides the admin dashboard and sync management endpoints.
-All routes require the user to be logged into LitRes with an email
+All routes require an ACTIVE (not expired) LitRes session whose email is
 listed in the ADMIN_EMAILS environment variable.
 
 GET  /admin/              — admin dashboard
@@ -20,7 +20,8 @@ import re
 import subprocess
 import threading
 
-from flask import Blueprint, abort, g, jsonify, render_template, request
+from flask import Blueprint, abort, current_app, g, jsonify, render_template, request
+from sqlalchemy.exc import OperationalError
 
 from app.config import Config
 from app.db import SessionLocal
@@ -34,6 +35,9 @@ _PERSISTENT_CRONTAB = os.path.join(Config.BASE_DIR, "persistent", "crontab")
 _DEFAULT_CRONTAB = os.path.join(Config.BASE_DIR, "docker", "app", "crontab")
 # In Docker the default lives at /app/crontab; fall back to the repo copy for dev
 _DOCKER_CRONTAB = "/app/crontab"
+# Env header written by docker/app/entrypoint.sh (cron starts jobs with an
+# empty environment, W14). Prepended on every install so an admin edit keeps it.
+_CRON_ENV_FILE = "/app/.cron-env"
 
 
 @bp.before_request
@@ -43,14 +47,18 @@ def _require_admin():
     if Config.ADMIN_EMAILS is None:
         abort(404)
 
-    # User must be authenticated via LitRes
+    from app.middleware import admin_email_for
+    from app.scrapers.auth import has_litres_tokens, parse_session_data
+
+    # User must hold an active LitRes session (an expired or logged-out one,
+    # or a bare litres_login, grants nothing — audit W5) ...
     with SessionLocal() as s:
         user = s.get(User, g.user_id)
-        if not user or not user.litres_login:
+        if not user or not has_litres_tokens(parse_session_data(user.session_data)):
             abort(403, description="Войдите через LitRes для доступа к панели администратора")
 
-        # Email must be in the allowlist (case-insensitive)
-        if user.litres_login.lower() not in Config.ADMIN_EMAILS:
+        # ... for an email in the allowlist (case-insensitive)
+        if admin_email_for(user, Config.ADMIN_EMAILS) is None:
             abort(403, description="Доступ запрещён")
 
 
@@ -114,6 +122,90 @@ def read_crontab() -> list[dict]:
 
 
 _CRON_FIELD_RE = re.compile(r"^[\d,\-\*/]+$")
+
+# The cron editor may only schedule `python -m app.sync <subcommand> [flags]`
+# (audit W5: free-form commands are code execution in the container).
+# Optional `cd /app && ` prefix and `>> /app/persistent/sync/<name>.log 2>&1`
+# suffix, exactly as in docker/app/crontab.
+_CRON_COMMAND_RE = re.compile(
+    r"^(?:cd /app && )?"
+    r"(?:/usr/local/bin/)?python3? -m app\.sync"
+    r"(?P<args>(?: [A-Za-z0-9_./\-]+)+)"
+    r"(?: >> (?:/app/)?persistent/sync/[A-Za-z0-9_.\-]+\.log 2>&1)?$"
+)
+_INT_RE = re.compile(r"^\d{1,6}$")
+_FLOAT_RE = re.compile(r"^\d{1,4}(?:\.\d{1,3})?$")
+# String-valued flags (e.g. retry-failed --failed-file) may only name a file
+# under persistent/sync/
+_PATH_RE = re.compile(r"^(?:/app/)?persistent/sync/[A-Za-z0-9_][A-Za-z0-9_.\-]*$")
+
+
+def _sync_cli_options() -> dict[str, dict[str, re.Pattern | None]]:
+    """{subcommand: {flag: value pattern, or None for a boolean flag}}.
+
+    Derived from the real `python -m app.sync` argparse definition, so the
+    allowlist follows the CLI (new flags/subcommands need no change here).
+    """
+    import argparse
+
+    from app.sync.__main__ import _build_parser
+
+    parser = _build_parser()
+    subparsers = next(
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    )
+    result: dict[str, dict[str, re.Pattern | None]] = {}
+    for name, sp in subparsers.choices.items():
+        flags: dict[str, re.Pattern | None] = {}
+        for action in sp._actions:
+            if isinstance(action, argparse._HelpAction):
+                continue
+            if action.nargs == 0:
+                pattern = None
+            elif action.type is int:
+                pattern = _INT_RE
+            elif action.type is float:
+                pattern = _FLOAT_RE
+            else:
+                pattern = _PATH_RE
+            for opt in action.option_strings:
+                if opt.startswith("--"):
+                    flags[opt] = pattern
+        result[name] = flags
+    return result
+
+
+def _validate_cron_command(command: str) -> str | None:
+    """Return None if `command` is an allowed sync invocation, else the reason."""
+    m = _CRON_COMMAND_RE.match(command)
+    if not m:
+        return "only 'python -m app.sync <subcommand> [flags]' commands are allowed"
+    tokens = m.group("args").split()
+    sub, rest = tokens[0], tokens[1:]
+    flags = _sync_cli_options().get(sub)
+    if flags is None:
+        return f"unknown sync subcommand '{sub}'"
+    seen: set[str] = set()
+    i = 0
+    while i < len(rest):
+        flag = rest[i]
+        if flag not in flags:
+            return f"flag '{flag}' is not allowed for '{sub}'"
+        if flag in seen:
+            return f"flag '{flag}' repeated"
+        seen.add(flag)
+        pattern = flags[flag]
+        if pattern is not None:
+            if i + 1 >= len(rest) or not pattern.match(rest[i + 1]):
+                return f"flag '{flag}' needs a valid value"
+            i += 1
+        i += 1
+    return None
+
+
+def _single_line(text: str) -> str:
+    """Collapse CR/LF and other control characters so a value stays on its line."""
+    return " ".join("".join(ch if ch.isprintable() else " " for ch in text).split())
 
 
 def _validate_cron_expression(expr: str) -> bool:
@@ -226,13 +318,24 @@ def cron_update():
         return jsonify({"error": "'jobs' must be a non-empty list"}), 400
 
     # Validate each job
+    clean_jobs: list[tuple[str, str, str]] = []
     for i, job in enumerate(jobs):
-        schedule = (job.get("schedule") or "").strip()
-        command = (job.get("command") or "").strip()
+        if not isinstance(job, dict):
+            return jsonify({"error": f"Job {i}: must be an object"}), 400
+        schedule, command, description = (
+            job.get(k) if isinstance(job.get(k), str) else ""
+            for k in ("schedule", "command", "description")
+        )
+        schedule = " ".join(schedule.split())
+        command = command.strip()
         if not schedule or not command:
             return jsonify({"error": f"Job {i}: schedule and command are required"}), 400
         if not _validate_cron_expression(schedule):
             return jsonify({"error": f"Job {i}: invalid cron expression '{schedule}'"}), 400
+        reason = _validate_cron_command(command)
+        if reason:
+            return jsonify({"error": f"Job {i}: {reason}"}), 400
+        clean_jobs.append((schedule, command, _single_line(description)))
 
     # Build crontab content
     header = (
@@ -244,10 +347,7 @@ def cron_update():
         "\n"
     )
     lines = [header]
-    for job in jobs:
-        schedule = job["schedule"].strip()
-        command = job["command"].strip()
-        description = (job.get("description") or "").strip()
+    for schedule, command, description in clean_jobs:
         if description:
             lines.append(f"# {description}\n")
         lines.append(f"{schedule}  {command}\n\n")
@@ -263,9 +363,21 @@ def cron_update():
         log.error("Failed to write crontab: %s", exc)
         return jsonify({"error": f"Failed to write crontab: {exc}"}), 500
 
-    # Install via crontab command
+    # Install via crontab command, with the container env header in front
+    env_header = ""
+    try:
+        with open(_CRON_ENV_FILE, encoding="utf-8") as f:
+            env_header = f.read()
+    except FileNotFoundError:
+        pass  # dev / no entrypoint: nothing to prepend
+    except OSError as exc:
+        log.error("Cannot read %s: %s", _CRON_ENV_FILE, exc)
+        return jsonify({"error": f"Cannot read cron env file: {exc}"}), 500
+    if env_header and not env_header.endswith("\n"):
+        env_header += "\n"
     result = subprocess.run(
-        ["crontab", _PERSISTENT_CRONTAB],
+        ["crontab", "-"],
+        input=env_header + content,
         capture_output=True,
         text=True,
     )
@@ -333,22 +445,110 @@ def _run_bulk_background(**kwargs) -> None:
         log.exception("Background bulk sync failed")
 
 
-@bp.post("/sync/bulk")
-def start_bulk():
-    body = request.get_json(silent=True) or {}
-    resume = bool(body.get("resume", False))
-    max_pages = body.get("max_pages")
-    max_hours = body.get("max_hours")
-    dry_run = bool(body.get("dry_run", False))
+def _positive_number(value, kind):
+    """None, or a positive int/float; ValueError otherwise (W13)."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        raise ValueError("max_pages/max_hours must be positive numbers")
+    try:
+        number = kind(value)
+    except (TypeError, ValueError):
+        raise ValueError("max_pages/max_hours must be positive numbers") from None
+    if kind is int and isinstance(value, float) and value != number:
+        raise ValueError("max_pages must be a whole number")
+    if number <= 0:
+        raise ValueError("max_pages/max_hours must be positive numbers")
+    return number
+
+
+class _SyncAlreadyRunning(Exception):
+    def __init__(self, run_id: int) -> None:
+        super().__init__(run_id)
+        self.run_id = run_id
+
+
+def _insert_running_catalog_run(sync_type: str) -> int:
+    """Insert a ``running`` bulk/delta SyncRun under BEGIN IMMEDIATE (W13).
+
+    The immediate transaction holds the SQLite write lock from the check to
+    the commit, so two requests (any worker) cannot both pass the check.
+    run_bulk(run_id=...) adopts the row.
+    """
+    from datetime import datetime, timezone
+
+    from app.sync.common import CATALOG_SYNC_TYPES, get_sync_config
 
     with SessionLocal() as session:
-        running = session.query(SyncRun).filter_by(status="running").first()
+        session.connection().exec_driver_sql("BEGIN IMMEDIATE")
+        try:
+            other = (
+                session.query(SyncRun)
+                .filter(SyncRun.status == "running", SyncRun.type.in_(CATALOG_SYNC_TYPES))
+                .first()
+            )
+            if other is not None:
+                raise _SyncAlreadyRunning(other.id)
+            run = SyncRun(
+                sync_config_id=get_sync_config(session).id,
+                type=sync_type,
+                started_at=datetime.now(timezone.utc),
+                heartbeat_at=datetime.now(timezone.utc),
+                status="running",
+                pages_fetched=0,
+                books_upserted=0,
+                series_fetched=0,
+            )
+            session.add(run)
+            session.commit()
+            return run.id
+        except BaseException:
+            session.rollback()
+            raise
+
+
+@bp.post("/sync/bulk")
+def start_bulk():
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        body = {}
+    resume = bool(body.get("resume", False))
+    dry_run = bool(body.get("dry_run", False))
+    try:
+        max_pages = _positive_number(body.get("max_pages"), int)
+        max_hours = _positive_number(body.get("max_hours"), float)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    with SessionLocal() as session:
+        # Only live catalog syncs conflict (zombies reaped first); a per-user
+        # profile run must not block (W3)
+        from app.sync.common import find_running_catalog_sync
+
+        running = find_running_catalog_sync(session)
         if running:
             return jsonify({"error": f"Sync already running (id={running.id})"}), 409
 
+    run_id = None
+    if not resume:
+        # W13: claim the run inside the request, so a double click or a second
+        # worker gets 409 instead of starting a parallel sync. (A resume
+        # re-opens an interrupted row inside run_bulk instead.)
+        try:
+            run_id = _insert_running_catalog_run(
+                "delta" if max_pages is not None else "bulk"
+            )
+        except _SyncAlreadyRunning as exc:
+            return jsonify({"error": f"Sync already running (id={exc.run_id})"}), 409
+        except OperationalError:
+            log.warning("Could not claim a bulk SyncRun: database busy")
+            return jsonify({"error": "База данных занята — попробуйте ещё раз через минуту"}), 503
+
     thread = threading.Thread(
         target=_run_bulk_background,
-        kwargs=dict(resume=resume, max_pages=max_pages, max_hours=max_hours, dry_run=dry_run),
+        kwargs=dict(
+            resume=resume, max_pages=max_pages, max_hours=max_hours, dry_run=dry_run, run_id=run_id,
+        ),
         daemon=True,
     )
     thread.start()
@@ -379,6 +579,16 @@ def start_profile_sync():
             return jsonify({"error": "Invalid session data"}), 401
         if not email:
             return jsonify({"error": "No email in session — login first"}), 401
+
+    # Same cross-worker claim as the automatic sync: no duplicate runs (W6)
+    from app.sync.profile import claim_profile_sync
+    if not claim_profile_sync(
+        SessionLocal, g.user_id,
+        retry_minutes=current_app.config.get("PROFILE_SYNC_RETRY_MINUTES", 15),
+    ):
+        return jsonify({
+            "error": "Синхронизация профиля уже запущена недавно — попробуйте позже",
+        }), 409
 
     thread = threading.Thread(
         target=_run_profile_background,

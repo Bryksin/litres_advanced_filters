@@ -1,4 +1,5 @@
 {% extends "admin/base.html" %}
+{% import "_macros.html" as m %}
 {% block title %}Панель управления{% endblock %}
 
 {% block content %}
@@ -209,7 +210,7 @@
     <div style="margin-top: var(--space-4);">
       <button type="button" class="admin-btn admin-btn--primary" id="btn-retry"
               data-file="{{ failed_file }}">
-        Повторить ({{ failed_books | length }} книг)
+        Повторить ({{ failed_books | length }} {{ m.plural(failed_books | length, 'книга', 'книги', 'книг') }})
       </button>
       <span id="retry-message" style="margin-left: var(--space-3); font-size: 0.82rem;"></span>
     </div>
@@ -240,8 +241,14 @@
   "use strict";
 
   /* ---------- helpers ---------- */
-  function setMsg(el, html, cls) {
-    el.innerHTML = '<div class="' + cls + '">' + html + '</div>';
+  // Messages may echo server text (user input, crontab stderr): text only, never HTML
+  function setMsg(el, text, cls) {
+    el.textContent = '';
+    if (!text) return;
+    var div = document.createElement('div');
+    if (cls) div.className = cls;
+    div.textContent = text;
+    el.appendChild(div);
   }
 
   async function postJSON(url, body) {
@@ -257,6 +264,18 @@
   /* ---------- Manual sync triggers ---------- */
   var syncMsg = document.getElementById("sync-message");
 
+  // After a successful start both buttons stay disabled until the page is
+  // reloaded: a second click would race the first run's SyncRun row.
+  function lockSyncButtons(clicked) {
+    ["btn-delta", "btn-full"].forEach(function(id) {
+      var b = document.getElementById(id);
+      if (!b) return;
+      b.disabled = true;
+      b.title = "Синхронизация уже запущена. Обновите страницу, чтобы увидеть статус.";
+    });
+    clicked.textContent = "Выполняется…";
+  }
+
   document.getElementById("btn-delta").addEventListener("click", function() {
     var btn = this;
     btn.disabled = true;
@@ -265,9 +284,10 @@
     postJSON("/admin/sync/bulk", {max_pages: 100}).then(function(r) {
       if (r.ok) {
         setMsg(syncMsg, "Дельта-синхронизация запущена в фоне. Обновите страницу через несколько минут.", "alert-success");
-      } else {
-        setMsg(syncMsg, "Ошибка: " + (r.data.error || "Неизвестная ошибка"), "alert-error");
+        lockSyncButtons(btn);
+        return;
       }
+      setMsg(syncMsg, "Ошибка: " + (r.data.error || "Неизвестная ошибка"), "alert-error");
       btn.disabled = false;
       btn.textContent = "Дельта-синхронизация (100 стр.)";
     }).catch(function(e) {
@@ -285,9 +305,10 @@
     postJSON("/admin/sync/bulk", {}).then(function(r) {
       if (r.ok) {
         setMsg(syncMsg, "Полная синхронизация запущена в фоне. Это может занять более часа.", "alert-success");
-      } else {
-        setMsg(syncMsg, "Ошибка: " + (r.data.error || "Неизвестная ошибка"), "alert-error");
+        lockSyncButtons(btn);
+        return;
       }
+      setMsg(syncMsg, "Ошибка: " + (r.data.error || "Неизвестная ошибка"), "alert-error");
       btn.disabled = false;
       btn.textContent = "Полная синхронизация";
     }).catch(function(e) {
@@ -383,14 +404,18 @@
 
       postJSON("/admin/sync/retry", {failed_file: file}).then(function(r) {
         if (r.ok) {
-          retryMsg.innerHTML = '<span style="color:#6dd9a0;">Повтор запущен в фоне. Обновите страницу позже.</span>';
-        } else {
-          retryMsg.innerHTML = '<span style="color:#f07070;">Ошибка: ' + (r.data.error || "Неизвестная ошибка") + '</span>';
+          retryMsg.style.color = "#6dd9a0";
+          retryMsg.textContent = "Повтор запущен в фоне. Обновите страницу позже.";
+          btn.textContent = "Выполняется…";
+          return; // stays disabled: the retry runs in the background
         }
+        retryMsg.style.color = "#f07070";
+        retryMsg.textContent = "Ошибка: " + (r.data.error || "Неизвестная ошибка");
         btn.disabled = false;
         btn.textContent = "Повторить";
       }).catch(function(e) {
-        retryMsg.innerHTML = '<span style="color:#f07070;">Сетевая ошибка: ' + e.message + '</span>';
+        retryMsg.style.color = "#f07070";
+        retryMsg.textContent = "Сетевая ошибка: " + e.message;
         btn.disabled = false;
         btn.textContent = "Повторить";
       });

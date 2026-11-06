@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.config.config import Config
 from app.db import SessionLocal
-from app.db.models import Series, SyncConfig, SyncRun
+from app.db.models import Genre, SyncConfig, SyncRun
 from app.scrapers.catalog import fetch_catalog_page
 from app.scrapers.client import RateLimitedClient
 from app.sync.common import (
@@ -30,7 +30,7 @@ from app.sync.common import (
     log_failed_book,
     make_run_tag,
 )
-from app.sync.ingest import _upsert_book_series_link, ingest_book, ingest_series
+from app.sync.ingest import ingest_book, link_book_series, tag_root_genre
 
 log = logging.getLogger(__name__)
 
@@ -81,6 +81,84 @@ def _open_sync_run(
     return run
 
 
+def _retryable_reason(exc: Exception) -> str | None:
+    """Return a short reason if a catalog-page error is worth retrying."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        code = exc.response.status_code
+        if code >= 500 or code == 429:
+            return str(code)
+        return None
+    if isinstance(exc, httpx.TransportError):
+        return type(exc).__name__
+    return None
+
+
+def _retry_after_seconds(exc: Exception) -> int:
+    """Honour a numeric Retry-After header (429/503), capped at 15 minutes."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        value = exc.response.headers.get("retry-after", "")
+        if value.isdigit():
+            return min(int(value), 900)
+    return 0
+
+
+def _refresh_genre_tree(session: Session, client: RateLimitedClient) -> None:
+    """Re-scrape the genre DAG before a full crawl (S2). Never fatal."""
+    from app.sync.genres import sync_genre_tree
+
+    try:
+        total = sync_genre_tree(session, client)
+        commit_with_retry(session, context="genre tree refresh")
+        log.info("Genre tree refreshed: %d genres", total)
+    except Exception:
+        session.rollback()
+        log.exception("Genre tree refresh failed — continuing with the stored tree")
+
+
+def _run_maintenance(
+    session: Session,
+    client: RateLimitedClient,
+    run_id: int,
+    refresh_series: int,
+    refresh_books: int,
+) -> None:
+    """Bounded roster + stale-book refresh after a successful crawl. Never fatal."""
+    from app.sync.refresh import refresh_series_rosters, refresh_stale_books
+
+    try:
+        refresh_series_rosters(session, client, limit=refresh_series, run_id=run_id)
+    except Exception:
+        session.rollback()
+        log.exception("Roster refresh failed")
+    try:
+        refresh_stale_books(session, client, limit=refresh_books, run_id=run_id)
+    except Exception:
+        session.rollback()
+        log.exception("Stale-book refresh failed")
+
+
+def _adopt_sync_run(session: Session, run_id: int) -> SyncRun:
+    """Take over a pre-inserted ``running`` catalog SyncRun (W13).
+
+    Raises if the row is missing, not running, not bulk/delta, or if another
+    catalog run is also running.
+    """
+    from app.sync.common import find_running_catalog_sync
+
+    run = session.get(SyncRun, run_id)
+    if run is None or run.status != "running" or run.type not in ("bulk", "delta"):
+        raise RuntimeError(f"Cannot adopt SyncRun id={run_id}: not a running bulk/delta row")
+    other = find_running_catalog_sync(session, exclude_id=run_id)
+    if other is not None:
+        run.status = "failed"
+        run.finished_at = datetime.now(timezone.utc)
+        run.error_message = f"Not started: SyncRun id={other.id} already running"
+        session.commit()
+        raise RuntimeError(f"Sync already running: SyncRun id={other.id} started at {other.started_at}.")
+    log.info("Adopted SyncRun id=%d (type=%s)", run.id, run.type)
+    return run
+
+
 # ---------------------------------------------------------------------------
 # Core loop
 # ---------------------------------------------------------------------------
@@ -93,12 +171,27 @@ def run_bulk(
     max_hours: float | None = None,
     dry_run: bool = False,
     verbose: bool = False,
+    refresh_series: int = 0,
+    refresh_books: int = 0,
+    refresh_genres: bool = False,
+    run_id: int | None = None,
 ) -> None:
     """Run full catalog bulk sync.
 
     Iterates pages from GENRE_ID catalog (audiobook, ru, subscription=True).
     Commits per page; updates last_page_fetched after each commit.
     Stops early if max_pages or max_hours is reached.
+
+    Maintenance (off by default; the CLI/cron turns it on):
+      - refresh_genres: on a full run (no max_pages), re-scrape the genre DAG
+        first (S2). Failure is logged, not fatal.
+      - refresh_series / refresh_books: after a run that ends ``done``,
+        re-read up to N series rosters and re-check up to N stale books (S3, S4).
+
+    run_id: adopt an existing ``running`` bulk/delta SyncRun that the caller
+    already inserted (the admin endpoint claims it atomically, so two clicks
+    cannot both start a sync, W13). The running-sync guard then ignores that
+    row. ``resume`` is ignored when adopting.
     """
     from app.sync.logging_setup import setup_sync_logging
     run_tag = make_run_tag()
@@ -118,11 +211,18 @@ def run_bulk(
     final_error: str | None = None
 
     with SessionLocal() as session:
-        check_no_running_sync(session)
-        config = get_sync_config(session)
-        sync_type = "delta" if max_pages is not None else "bulk"
-        run = _open_sync_run(session, config, resume, sync_type=sync_type)
-        run_id = run.id
+        if run_id is not None:
+            run = _adopt_sync_run(session, run_id)
+            config = get_sync_config(session)
+        else:
+            check_no_running_sync(session)
+            config = get_sync_config(session)
+            sync_type = "delta" if max_pages is not None else "bulk"
+            run = _open_sync_run(session, config, resume, sync_type=sync_type)
+            run_id = run.id
+        run.heartbeat_at = datetime.now(timezone.utc)
+        if not dry_run:
+            session.commit()
 
         # Resume from the page AFTER the last completed one.
         # last_page_fetched=None means never started → start from 0.
@@ -132,6 +232,11 @@ def run_bulk(
 
         try:
             with RateLimitedClient() as client:
+                if refresh_genres and max_pages is None and not dry_run:
+                    _refresh_genre_tree(session, client)
+                root_genre_id = str(GENRE_ID)
+                tag_root = not dry_run and session.get(Genre, root_genre_id) is not None
+
                 offset = start_page * 24
                 page_number = start_page
 
@@ -149,7 +254,8 @@ def run_bulk(
                             final_status = "interrupted"
                             break
 
-                    # Fetch catalog page — retry up to 3 times on 5xx.
+                    # Fetch catalog page — retry up to 3 times on 5xx, 429 and
+                    # transport errors (timeouts, resets) (S7).
                     # Retry waits: 60s / 300s / 600s. On exhaustion: interrupt (not fail).
                     _retry_waits = RETRY_WAITS
                     page = None
@@ -164,30 +270,44 @@ def run_bulk(
                                 o="new",
                             )
                             break
-                        except httpx.HTTPStatusError as exc:
-                            if exc.response.status_code < 500:
-                                raise  # 4xx: non-retriable
+                        except (httpx.HTTPStatusError, httpx.TransportError) as exc:
+                            reason = _retryable_reason(exc)
+                            if reason is None:
+                                raise  # other 4xx: non-retriable
                             if _wait is None:
                                 log.error(
-                                    "[page %d] LitRes %d after %d retries — interrupting sync",
-                                    page_number, exc.response.status_code, len(_retry_waits),
+                                    "[page %d] LitRes %s after %d retries — interrupting sync",
+                                    page_number, reason, len(_retry_waits),
                                 )
                                 final_status = "interrupted"
                                 final_error = (
-                                    f"LitRes {exc.response.status_code} at page {page_number} "
+                                    f"LitRes {reason} at page {page_number} "
                                     f"({len(_retry_waits)} retries exhausted)"
                                 )
                                 return
+                            wait = max(_wait, _retry_after_seconds(exc))
                             log.warning(
-                                "[page %d] LitRes %d — retrying in %ds (attempt %d/%d)",
-                                page_number, exc.response.status_code,
-                                _wait, _attempt + 1, len(_retry_waits),
+                                "[page %d] LitRes %s — retrying in %ds (attempt %d/%d)",
+                                page_number, reason, wait, _attempt + 1, len(_retry_waits),
                             )
-                            time.sleep(_wait)
+                            time.sleep(wait)
 
                     if not page.books:
-                        log.info("[page %d] no books returned — end of catalog", page_number)
-                        final_status = "done"
+                        if offset > 0 and offset >= page.total_count:
+                            log.info("[page %d] no books returned — end of catalog", page_number)
+                            final_status = "done"
+                        else:
+                            # S9: an empty page before the advertised end (or a
+                            # response with no counters) is a LitRes error or an
+                            # API shape change, not the end of the catalog.
+                            log.error(
+                                "[page %d] empty page at offset=%d but total=%d — interrupting",
+                                page_number, offset, page.total_count,
+                            )
+                            final_status = "interrupted"
+                            final_error = (
+                                f"Empty catalog page at offset {offset} (total {page.total_count})"
+                            )
                         break
 
                     log.info("[page %d] %d books", page_number, len(page.books))
@@ -199,37 +319,18 @@ def run_bulk(
 
                             if is_new and not dry_run and detail is not None:
                                 new_count += 1
-                                for s_ref in detail.series:
-                                    if s_ref.art_order is None:
-                                        continue  # skip author collections
-                                    existing_series = session.get(Series, s_ref.id)
-                                    if existing_series is None:
-                                        log.info(
-                                            "[book %d] new series '%s' (id=%d, %d books) — ingesting",
-                                            art.id, s_ref.name, s_ref.id, s_ref.unique_arts_count,
-                                        )
-                                        ingested = ingest_series(
-                                            session, client,
-                                            s_ref.id, s_ref.name, s_ref.url, s_ref.unique_arts_count,
-                                            dry_run=dry_run,
-                                        )
-                                        series_count += 1
-                                        new_count += ingested
-                                        # Always link the triggering book — ingest_series may
-                                        # have returned 0 if the series page filtered it out.
-                                        if not dry_run:
-                                            _upsert_book_series_link(
-                                                session, art.id, s_ref.id, s_ref.art_order
-                                            )
-                                    else:
-                                        _upsert_book_series_link(
-                                            session, art.id, s_ref.id, s_ref.art_order
-                                        )
+                                # Series failures are isolated per series inside
+                                # link_book_series: they never drop the book (S1).
+                                n_series, n_members = link_book_series(session, client, art.id, detail)
+                                series_count += n_series
+                                new_count += n_members
                             elif is_new and dry_run:
                                 new_count += 1
                             else:
                                 updated_count += 1
 
+                            if tag_root:
+                                tag_root_genre(session, art.id, root_genre_id)
                             log.debug(
                                 "[book %d] '%s' — %s",
                                 art.id, art.title, "new" if is_new else "updated",
@@ -239,12 +340,24 @@ def run_bulk(
                             sp.rollback()
                             failed_count += 1
                             log_failed_book(sync_dir, run_tag, art, page_number, exc)
+                            continue
+                        if not dry_run:
+                            # Commit per book: the SQLite write lock is held only
+                            # for one book, not for a whole page of network calls
+                            # (web requests now give up after 5 s, see W1).
+                            try:
+                                session.commit()
+                            except Exception as exc:
+                                session.rollback()
+                                failed_count += 1
+                                log_failed_book(sync_dir, run_tag, art, page_number, exc)
 
                     if not dry_run:
                         run.last_page_fetched = page_number
                         run.pages_fetched = page_number + 1
                         run.books_upserted = new_count + updated_count
                         run.series_fetched = series_count
+                        run.heartbeat_at = datetime.now(timezone.utc)
                         commit_with_retry(session, context=f"bulk page {page_number}")
 
                     page_number += 1
@@ -262,9 +375,14 @@ def run_bulk(
 
                     offset = page.next_offset
 
-                if final_status == "done" and not dry_run:
+                # Only a full crawl that reached the end stamps last_bulk_sync_at
+                # (a --max-pages run is partial) (S16).
+                if final_status == "done" and not dry_run and max_pages is None:
                     config.last_bulk_sync_at = datetime.now(timezone.utc)
                     commit_with_retry(session, context="bulk last_bulk_sync_at")
+
+                if final_status == "done" and not dry_run and (refresh_series or refresh_books):
+                    _run_maintenance(session, client, run_id, refresh_series, refresh_books)
 
         except KeyboardInterrupt:
             final_status = "interrupted"
@@ -316,14 +434,21 @@ def run_bulk_cli(args) -> None:
         max_hours=args.max_hours,
         dry_run=args.dry_run,
         verbose=args.verbose,
+        refresh_series=args.refresh_series,
+        refresh_books=args.refresh_books,
+        refresh_genres=not args.no_refresh_genres,
     )
 
 
 def run_retry_failed_cli(args) -> None:
-    """Read failed_books JSONL and retry each entry."""
+    """Read failed_books JSONL and retry each entry.
+
+    Each entry gets its own savepoint and commit, so one DB error cannot
+    poison the rest of the file (S5). Series links are restored exactly as in
+    run_bulk, and the book is tagged with the crawl root genre.
+    """
     import glob as globmod
     from app.scrapers.arts import fetch_arts_detail
-    from app.sync.ingest import ingest_book
 
     if args.failed_file:
         failed_file = args.failed_file
@@ -348,6 +473,8 @@ def run_retry_failed_cli(args) -> None:
     failures = []
 
     with SessionLocal() as session:
+        root_genre_id = str(GENRE_ID)
+        tag_root = session.get(Genre, root_genre_id) is not None
         with RateLimitedClient() as client:
             for i, line in enumerate(lines):
                 line = line.strip()
@@ -357,11 +484,21 @@ def run_retry_failed_cli(args) -> None:
                     record = json.loads(line)
                     art_id = record["book_id"]
                     detail = fetch_arts_detail(client, art_id)
-                    ingest_book(session, client, detail.art, arts_detail=detail)
-                    session.commit()
+                    sp = session.begin_nested()
+                    try:
+                        ingest_book(session, client, detail.art, arts_detail=detail)
+                        link_book_series(session, client, art_id, detail)
+                        if tag_root:
+                            tag_root_genre(session, art_id, root_genre_id)
+                        sp.commit()
+                    except Exception:
+                        sp.rollback()
+                        raise
+                    commit_with_retry(session, context=f"retry-failed book {art_id}")
                     successes.append(i)
                     log.info("Retried book %d: OK", art_id)
                 except Exception as exc:
+                    session.rollback()
                     failures.append(line)
                     log.error("Retry failed for book: %s — %s", line[:80], exc)
 

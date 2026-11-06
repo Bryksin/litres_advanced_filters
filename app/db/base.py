@@ -58,6 +58,24 @@ def _get_database_dir() -> str:
     return Config.DATABASE_DIR
 
 
+# SQLite busy_timeout (ms) applied to every new connection. CLI sync jobs keep
+# the long default; the web app lowers it via set_busy_timeout() so a request
+# blocked behind a sync write transaction fails fast instead of outliving
+# gunicorn's worker timeout (default 30 s), see audit W1.
+DEFAULT_BUSY_TIMEOUT_MS = 30000
+WEB_BUSY_TIMEOUT_MS = 5000
+_busy_timeout_ms = DEFAULT_BUSY_TIMEOUT_MS
+
+
+def set_busy_timeout(ms: int) -> None:
+    """Change busy_timeout for this process; pooled connections are recycled."""
+    global _busy_timeout_ms
+    if ms == _busy_timeout_ms:
+        return
+    _busy_timeout_ms = int(ms)
+    engine.dispose()
+
+
 def create_db_engine():
     """Create and return a SQLAlchemy engine, ensuring the DB directory exists."""
     os.makedirs(_get_database_dir(), exist_ok=True)
@@ -69,13 +87,14 @@ def create_db_engine():
     # SQLite PRAGMAs applied on every new connection:
     # - foreign_keys: enforce FK constraints (off by default in SQLite)
     # - journal_mode=WAL: allow concurrent readers + one writer without blocking
-    # - busy_timeout: wait up to 30s for a write lock instead of failing immediately
+    # - busy_timeout: wait for a write lock instead of failing immediately
+    #   (30 s for CLI jobs, 5 s in the web app, see set_busy_timeout)
     @event.listens_for(db_engine, "connect")
     def _set_sqlite_pragma(dbapi_conn, _connection_record):
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.execute(f"PRAGMA busy_timeout={int(_busy_timeout_ms)}")
         cursor.close()
 
     return db_engine

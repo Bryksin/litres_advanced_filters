@@ -6,10 +6,20 @@ from flask import Blueprint, g, jsonify, render_template, request
 
 from app.config.config import Config
 from app.db import SessionLocal
-from app.db.models import BookSeries, UserIgnoredBook
+from app.db.models import BookSeries, Genre, UserIgnoredBook
 from app.services.catalog_service import get_catalog
 from app.services.genre_service import get_genre_ancestor_ids, get_genre_tree
-from app.services.settings_service import SettingsService
+from app.services.settings_service import (
+    DEFAULT_SORT,
+    PAGE_MAX,
+    RATING_COUNT_MAX,
+    SERIES_SIZE_MAX,
+    SettingsService,
+    clamp_int,
+    clamp_rating,
+    clean_sort,
+    parse_name_list_json,
+)
 
 bp = Blueprint("catalog", __name__)
 
@@ -22,38 +32,57 @@ def index():
         # Load saved settings as base
         query = settings_svc.get()
 
+        # F-5/F-11 need the LitRes listened list. An expired-but-known session
+        # still counts as authenticated and filters on the cached list.
+        from app.controllers.auth import _get_listened_count, _is_authenticated
+        is_authenticated, auth_email = _is_authenticated(SessionLocal, g.user_id)
+
+        # A saved genre that no longer exists (removed by a genre reseed) falls back.
+        saved_genre_id = query.genre_id if _genre_exists(session, query.genre_id) else None
+        query.genre_id = saved_genre_id
+
         # Override from URL params when filter form was submitted
         if "_submit" in request.args:
-            query.genre_id = request.args.get("genre_id") or query.genre_id
+            query.genre_id = _valid_genre_id(session, request.args.get("genre_id"), saved_genre_id)
             query.series_only = "only_series" in request.args
             query.standalones_only = "standalones_only" in request.args
-            query.series_min = _int_or_none(request.args.get("series_min"))
-            query.series_max = _int_or_none(request.args.get("series_max"))
+            query.series_min = clamp_int(request.args.get("series_min"), 0, SERIES_SIZE_MAX)
+            query.series_max = clamp_int(request.args.get("series_max"), 0, SERIES_SIZE_MAX)
             query.full_series_subscription = "full_series_subscription" in request.args
             query.exclude_authors = "exclude_authors" in request.args
             if query.exclude_authors:
-                query.excluded_authors = _parse_json_list(request.args.get("excluded_authors_json", "[]"))
+                query.excluded_authors = parse_name_list_json(request.args.get("excluded_authors_json"))
             query.exclude_narrators = "exclude_narrators" in request.args
             if query.exclude_narrators:
-                query.excluded_narrators = _parse_json_list(request.args.get("excluded_narrators_json", "[]"))
-            query.rating_min = _float_or_none(request.args.get("rating_min"))
-            query.rating_max = _float_or_none(request.args.get("rating_max"))
-            query.rating_count_min = _int_or_none(request.args.get("rating_count_min"))
-            query.hide_listened = "hide_listened" in request.args
-            query.incomplete_series_only = "incomplete_series_only" in request.args
-            # Mutually exclusive: incomplete_series_only wins if both sent
-            if query.hide_listened and query.incomplete_series_only:
-                query.hide_listened = False
+                query.excluded_narrators = parse_name_list_json(request.args.get("excluded_narrators_json"))
+            query.rating_min = clamp_rating(request.args.get("rating_min"))
+            query.rating_max = clamp_rating(request.args.get("rating_max"))
+            query.rating_count_min = clamp_int(request.args.get("rating_count_min"), 0, RATING_COUNT_MAX)
+            # The listened-based checkboxes are disabled in the form while logged
+            # out, so their absence then means "not sent", not "off": keep the
+            # saved values (Q-S5).
+            if is_authenticated:
+                query.hide_listened = "hide_listened" in request.args
+                query.incomplete_series_only = "incomplete_series_only" in request.args
+                # Mutually exclusive: incomplete_series_only wins if both sent
+                if query.hide_listened and query.incomplete_series_only:
+                    query.hide_listened = False
+            # The form omits the sort parameter for the default order.
+            query.sort = clean_sort(request.args.get("sort") or DEFAULT_SORT)
             settings_svc.save(query)
         elif "_reset" in request.args:
             query = settings_svc.reset()
-        elif request.args.get("genre_id"):
-            # Genre navigation (no _submit) — just override genre
-            query.genre_id = request.args.get("genre_id")
+        else:
+            if request.args.get("genre_id"):
+                # Genre navigation (no _submit) — just override genre
+                query.genre_id = _valid_genre_id(session, request.args.get("genre_id"), saved_genre_id)
+            if request.args.get("sort"):
+                # A sort change outside the form is remembered too (Q-S6).
+                query.sort = clean_sort(request.args.get("sort"))
+                settings_svc.save_sort(query.sort)
 
-        # Pagination + sort from URL (not persisted)
-        query.page = max(1, _int_or_none(request.args.get("page")) or 1)
-        query.sort = request.args.get("sort", query.sort)
+        # Pagination from URL (not persisted)
+        query.page = clamp_int(request.args.get("page"), 1, PAGE_MAX) or 1
 
         # The sidebar highlights the default genre when none is saved; filter
         # the catalog by that same genre so the page matches the highlight.
@@ -62,12 +91,8 @@ def index():
         genres = get_genre_tree(session)
         open_genre_ids = get_genre_ancestor_ids(session, genre_id)
 
-        # F-5/F-11 need the LitRes listened list. Disable them for this request
-        # (the saved settings are kept) on every path, not only on form submit,
-        # when the user has no LitRes account. An expired-but-known session
-        # still counts as authenticated and filters on the cached list.
-        from app.controllers.auth import _get_listened_count, _is_authenticated
-        is_authenticated, auth_email = _is_authenticated(SessionLocal, g.user_id)
+        # Disable F-5/F-11 for this request (the saved settings are kept) on
+        # every path when the user has no LitRes account.
         if not is_authenticated:
             query.hide_listened = False
             query.incomplete_series_only = False
@@ -100,31 +125,17 @@ def index():
         )
 
 
-def _int_or_none(val: str | None) -> int | None:
-    if val is None or val == "":
-        return None
-    try:
-        return int(val)
-    except ValueError:
-        return None
+def _genre_exists(session, genre_id: str | None) -> bool:
+    if not genre_id or len(genre_id) > 32:
+        return False
+    return session.get(Genre, genre_id) is not None
 
 
-def _float_or_none(val: str | None) -> float | None:
-    if val is None or val == "":
-        return None
-    try:
-        return float(val)
-    except ValueError:
-        return None
-
-
-def _parse_json_list(val: str) -> list[str]:
-    import json
-    try:
-        result = json.loads(val)
-        return result if isinstance(result, list) else []
-    except (json.JSONDecodeError, TypeError):
-        return []
+def _valid_genre_id(session, requested: str | None, fallback: str | None) -> str | None:
+    """The requested genre when it exists, else the fallback (saved genre or None = default)."""
+    if requested and _genre_exists(session, requested):
+        return requested
+    return fallback
 
 
 # ---------------------------------------------------------------------------

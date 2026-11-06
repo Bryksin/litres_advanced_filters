@@ -259,7 +259,7 @@ button, input, select { font-family: inherit; }
   color: rgba(255, 255, 255, 0.55);
 }
 .genre-tree.is-filtered .genre-tree__item.is-match > .genre-tree__link,
-.genre-tree.is-filtered .genre-tree__item.is-match > .genre-tree__details > .genre-tree__summary {
+.genre-tree.is-filtered .genre-tree__item.is-match > .genre-tree__row > .genre-tree__link {
   color: var(--sb-text-bright);
 }
 
@@ -341,18 +341,15 @@ button, input, select { font-family: inherit; }
 
 .genre-tree__item { margin: 0; }
 
-.genre-tree__details { margin: 0; }
-
-/* Indent the child list inside every open details section */
-.genre-tree__details > .genre-tree__list {
-  padding-left: 0;
-}
+/* Per-depth indent of the genre name (parents add room for the chevron) */
+.genre-tree__list { --gt-indent: 1.25rem; }
+.genre-tree__list[data-depth="1"] { --gt-indent: 3rem; }
+.genre-tree__list[data-depth="2"] { --gt-indent: 4.75rem; }
 
 /* Shared styles for clickable genre items */
-.genre-tree__link,
-.genre-tree__summary {
+.genre-tree__link {
   display: block;
-  padding: 0.35rem 1rem 0.35rem 1.25rem;
+  padding: 0.35rem 1rem 0.35rem var(--gt-indent);
   font-size: 0.84rem;
   color: var(--sb-text);
   cursor: pointer;
@@ -366,55 +363,76 @@ button, input, select { font-family: inherit; }
   overflow-wrap: anywhere;
 }
 .genre-tree__link:hover,
-.genre-tree__summary:hover {
+.genre-tree__row:hover > .genre-tree__link {
   background: var(--sb-bg-hover);
   color: var(--sb-text-bright);
 }
 .genre-tree__link.is-active,
-.genre-tree__summary.is-active {
+.genre-tree__row:hover > .genre-tree__link.is-active {
   background: var(--sb-bg-active);
   color: var(--sb-accent);
 }
 
-.genre-tree__summary {
-  list-style: none;
+/* Parent row: name button spans the row, the chevron button overlays its
+   left gutter (the whole gutter is the expand/collapse hit area). */
+.genre-tree__row { position: relative; }
+.genre-tree__link--parent {
+  padding-left: calc(var(--gt-indent) + 0.85rem);
   font-weight: 500;
 }
-.genre-tree__summary::-webkit-details-marker { display: none; }
-
+.genre-tree__toggle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  width: calc(var(--gt-indent) + 0.85rem);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 0.2rem 0 0;
+  border: none;
+  background: none;
+  color: var(--sb-text);
+  cursor: pointer;
+}
 /* Arrow indicator */
-.genre-tree__summary::before {
+.genre-tree__toggle::before {
   content: "\25B8";
   display: inline-block;
   width: 1em;
   font-size: 0.7em;
-  transition: transform var(--transition);
+  text-align: center;
+  transition: transform var(--transition), opacity var(--transition);
   opacity: 0.6;
 }
-.genre-tree__details[open] > .genre-tree__summary::before {
+.genre-tree__toggle:hover::before { opacity: 1; }
+.genre-tree__item--parent.is-open > .genre-tree__row > .genre-tree__toggle::before {
   transform: rotate(90deg);
 }
+.genre-tree__toggle:focus-visible {
+  outline: 2px solid var(--sb-accent);
+  outline-offset: -2px;
+}
 
-/* Depth 0 (root): default padding-left 1.25rem from base styles above */
+/* Depth 0 (root): default indent above */
 
 /* Depth 1 (children of root) */
 .genre-tree__list[data-depth="1"] > .genre-tree__item > .genre-tree__link,
-.genre-tree__list[data-depth="1"] > .genre-tree__item > .genre-tree__details > .genre-tree__summary {
-  padding-left: 3rem;
+.genre-tree__list[data-depth="1"] > .genre-tree__item > .genre-tree__row > .genre-tree__link {
   font-size: 0.82rem;
   font-weight: 400;
 }
 
 /* Depth 2 (grandchildren) */
 .genre-tree__list[data-depth="2"] > .genre-tree__item > .genre-tree__link,
-.genre-tree__list[data-depth="2"] > .genre-tree__item > .genre-tree__details > .genre-tree__summary {
-  padding-left: 4.75rem;
+.genre-tree__list[data-depth="2"] > .genre-tree__item > .genre-tree__row > .genre-tree__link {
   font-size: 0.8rem;
   font-weight: 400;
   opacity: 0.85;
 }
 .genre-tree__list[data-depth="2"] > .genre-tree__item > .genre-tree__link:hover,
-.genre-tree__list[data-depth="2"] > .genre-tree__item > .genre-tree__details > .genre-tree__summary:hover {
+.genre-tree__list[data-depth="2"] > .genre-tree__item > .genre-tree__row > .genre-tree__link:hover {
   opacity: 1;
 }
 
@@ -1019,6 +1037,59 @@ button, input, select { font-family: inherit; }
   background: var(--danger-light);
 }
 
+/* Toast: undo / error after a card action */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: max-content;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 0.6rem 0.6rem 0.6rem 1rem;
+  background: var(--sb-bg);
+  color: var(--sb-text-bright);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.875rem;
+}
+.toast[hidden] { display: none; }
+.toast__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toast__action,
+.toast__close {
+  min-height: 36px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+}
+.toast__action {
+  padding: 0 0.75rem;
+  color: var(--sb-accent);
+  font-weight: 600;
+}
+.toast__action:hover { background: rgba(232, 197, 142, 0.12); }
+.toast__close {
+  width: 36px;
+  color: var(--sb-text);
+  font-size: 1.15rem;
+}
+.toast__close:hover { color: var(--sb-text-bright); }
+@media (pointer: coarse) {
+  .toast__action, .toast__close { min-height: 44px; }
+  .toast__close { width: 44px; }
+}
+
 /* Empty state */
 .empty-state {
   grid-column: 1 / -1;
@@ -1113,8 +1184,7 @@ button, input, select { font-family: inherit; }
   box-shadow: 0 0 0 3px rgba(154, 85, 32, 0.3);
 }
 /* Genre tree inset focus */
-.genre-tree__link:focus-visible,
-.genre-tree__summary:focus-visible {
+.genre-tree__link:focus-visible {
   outline-offset: -2px;
 }
 
@@ -1122,8 +1192,7 @@ button, input, select { font-family: inherit; }
 .f-control {
   min-height: 44px;
 }
-.genre-tree__link,
-.genre-tree__summary {
+.genre-tree__link {
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -1131,8 +1200,7 @@ button, input, select { font-family: inherit; }
 
 /* Mouse/trackpad: denser genre rows (touch keeps 44px) */
 @media (pointer: fine) and (min-width: 1024px) {
-  .genre-tree__link,
-  .genre-tree__summary { min-height: 34px; }
+  .genre-tree__link { min-height: 34px; }
 }
 
 /* Filters auto-apply — the mobile footer button only closes the drawer */

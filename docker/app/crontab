@@ -3,7 +3,14 @@
 # Delta sync: Mon-Sat 00:00 — first 100 pages (newest-first), catches new books
 # Full  sync: Sunday  00:00 — full catalog re-crawl, no time limit
 #
-# Logs go to persistent/sync/sync.log (rotating, managed by sync engine)
+# Per-run logs: persistent/sync/sync_<tag>.log, sync_errors_<tag>.log and
+# failed_books_<tag>.jsonl. Every `python -m app.sync` run (and container boot)
+# deletes those older than 14 days (env SYNC_LOG_RETENTION_DAYS) and caps
+# cron.log at 20 MB (the last 5 MB move to cron.log.1).
+# After a successful run, bulk also re-reads up to 300 series rosters (at most
+# 1500 member arts calls) and re-checks up to 500 stale books
+# (--refresh-series / --refresh-books). A full (Sunday) run first re-scrapes
+# the genre tree (--no-refresh-genres to skip).
 #
 # Commands use the absolute python path so cron works even when its
 # environment has no PATH; PATH= below is kept as defence in depth.

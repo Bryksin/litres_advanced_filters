@@ -24,15 +24,45 @@ class Config:
     TEMPLATE_FOLDER = os.path.join(BASE_DIR, "templates")
     STATIC_FOLDER = os.path.join(BASE_DIR, "static")
 
-    # Session secret (set via env in production)
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-change-in-production"
+    # Session secret (set via env in production). The fallback is for local dev
+    # and tests only: create_app refuses to serve it under gunicorn (audit W10).
+    INSECURE_DEV_SECRET_KEY = "dev-secret-change-in-production"
+    SECRET_KEY = os.environ.get("SECRET_KEY") or INSECURE_DEV_SECRET_KEY
 
     # Persistent session: keep users logged in for 365 days
     from datetime import timedelta
     PERMANENT_SESSION_LIFETIME = timedelta(days=365)
 
+    # Session cookie hardening (audit W2/W8). SameSite=Lax stops cross-site
+    # POSTs from carrying the cookie; HttpOnly is Flask's default.
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_HTTPONLY = True
+    # Secure flag: "auto" (default) sets it when the request arrived over HTTPS
+    # (directly or via X-Forwarded-Proto from the TLS proxy), so plain-http
+    # local dev keeps working; "1"/"0" force it on/off.
+    SESSION_COOKIE_SECURE_MODE: str = os.environ.get("SESSION_COOKIE_SECURE", "auto").strip().lower()
+
+    # Extra origins allowed to send state-changing requests (CSRF Origin check),
+    # comma-separated hosts or origins, e.g. "litres.example.org". The request's
+    # own Host / X-Forwarded-Host is always allowed.
+    TRUSTED_ORIGINS: set[str] = {
+        o.strip().lower() for o in os.environ.get("TRUSTED_ORIGINS", "").split(",") if o.strip()
+    }
+
+    # Number of reverse proxies in front of the app whose X-Forwarded-For entry
+    # is trusted for the client IP (login rate limit). 0 = use the socket peer.
+    TRUSTED_PROXY_HOPS: int = int(os.environ.get("TRUSTED_PROXY_HOPS", "0") or 0)
+
+    # /auth/login throttle (audit W7): attempts per window, per client IP and per email.
+    LOGIN_RATE_WINDOW_SECONDS: int = 600
+    LOGIN_RATE_MAX_PER_IP: int = 20
+    LOGIN_RATE_MAX_PER_EMAIL: int = 5
+
     # Profile sync staleness threshold (hours) — auto-resync if older
     PROFILE_SYNC_STALE_HOURS: int = 20
+    # A started (or failed) background profile sync blocks a new one for this
+    # long — the server-side, cross-worker throttle (audit W6/W12).
+    PROFILE_SYNC_RETRY_MINUTES: int = 15
 
     # Debug mode
     DEBUG = os.environ.get("FLASK_DEBUG", "0").lower() in ("1", "true", "yes")

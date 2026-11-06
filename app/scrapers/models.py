@@ -19,6 +19,10 @@ class GenreNode:
     children: list["GenreNode"] = field(default_factory=list)
     # Optional: document count if present in UI (e.g. "Genre 130704")
     count: int | None = None
+    # True when ``children`` is the full, freshly scraped child list (the
+    # page was fetched and parsed). Genre sync only prunes stale parent edges
+    # of nodes whose children are complete.
+    children_complete: bool = False
 
 
 # --- Catalog / facets API (art object) ---

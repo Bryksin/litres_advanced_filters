@@ -22,9 +22,21 @@ echo "  On host machine: http://localhost:$PORT  or  http://127.0.0.1:$PORT"
 echo "  From devcontainer: http://host.docker.internal:$PORT"
 docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
 ENV_ARGS=()
-[ -n "$SECRET_KEY" ] && ENV_ARGS+=(-e "SECRET_KEY=$SECRET_KEY")
+# The image refuses to start without SECRET_KEY (the built-in dev key would
+# make session cookies forgeable). For a local run without one, use a random
+# key: sessions then reset whenever the container is recreated.
+if [ -z "$SECRET_KEY" ]; then
+  echo "  SECRET_KEY not set — using a random key for this run (logins reset on restart)"
+  SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))' 2>/dev/null || head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+fi
+ENV_ARGS+=(-e "SECRET_KEY=$SECRET_KEY")
 [ -n "$LITRES_EMAIL" ] && ENV_ARGS+=(-e "LITRES_EMAIL=$LITRES_EMAIL")
 [ -n "$LITRES_PASSWORD" ] && ENV_ARGS+=(-e "LITRES_PASSWORD=$LITRES_PASSWORD")
 [ -n "$ADMIN_EMAILS" ] && ENV_ARGS+=(-e "ADMIN_EMAILS=$ADMIN_EMAILS")
+# Security settings (see app/config/config.py): cookie Secure flag mode,
+# extra origins for the CSRF check, trusted reverse-proxy hops for client IPs
+[ -n "$SESSION_COOKIE_SECURE" ] && ENV_ARGS+=(-e "SESSION_COOKIE_SECURE=$SESSION_COOKIE_SECURE")
+[ -n "$TRUSTED_ORIGINS" ] && ENV_ARGS+=(-e "TRUSTED_ORIGINS=$TRUSTED_ORIGINS")
+[ -n "$TRUSTED_PROXY_HOPS" ] && ENV_ARGS+=(-e "TRUSTED_PROXY_HOPS=$TRUSTED_PROXY_HOPS")
 
 docker run --rm --name "$CONTAINER_NAME" -p "127.0.0.1:$PORT:5000" -v "$REPO_ROOT/persistent:/app/persistent" "${ENV_ARGS[@]}" "$IMAGE_NAME"

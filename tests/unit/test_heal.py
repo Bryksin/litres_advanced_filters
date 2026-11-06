@@ -191,3 +191,65 @@ def test_heal_genres_handles_api_failure(db_session):
 
     assert stats["healed"] == 0
     assert stats["failed"] == 1
+
+
+# --- S12: per-book savepoint + heal_authors -------------------------------
+
+
+def test_heal_narrators_db_error_does_not_poison_later_books(db_session):
+    """One IntegrityError must not roll back or block the other books (S12)."""
+    from datetime import datetime, timezone
+    from unittest.mock import MagicMock, patch
+
+    from app.db.models import Book, BookNarrator, Person
+    from app.scrapers.models import Art, ArtDetail, ArtPrices, ArtRating, PersonRef
+    from app.sync.heal import heal_narrators
+
+    now = datetime.now(timezone.utc)
+    for bid in (1, 2, 3):
+        db_session.add(Book(id=bid, title="t", url="/u/", art_type=1, cached_at=now))
+    db_session.commit()
+
+    def detail(client, book_id):
+        art = Art(id=book_id, title="t", url="/u/", art_type=1,
+                  persons=[PersonRef(id=500 + book_id, full_name="N", url="/n/", role="reader")],
+                  rating=ArtRating(None, 0), prices=ArtPrices(0.0, 0.0, "RUB"),
+                  is_available_with_subscription=True, is_abonement_art=True)
+        return ArtDetail(art=art, genres=[], series=[], release_date=None)
+
+    real_add = db_session.add
+
+    def add(obj):
+        real_add(obj)
+        if isinstance(obj, Person) and obj.id == 502:
+            real_add(Person(id=501, full_name="dup", url=""))  # duplicate PK -> IntegrityError
+
+    with patch("app.sync.heal.fetch_arts_detail", side_effect=detail), \
+         patch.object(db_session, "add", side_effect=add):
+        stats = heal_narrators(db_session, MagicMock())
+    db_session.commit()
+
+    assert stats["failed"] == 1 and stats["healed"] == 2
+    assert {n.book_id for n in db_session.query(BookNarrator)} == {1, 3}
+
+
+def test_heal_authors_backfills(db_session):
+    from datetime import datetime, timezone
+    from unittest.mock import MagicMock, patch
+
+    from app.db.models import Book, BookAuthor
+    from app.scrapers.models import Art, ArtDetail, ArtPrices, ArtRating, PersonRef
+    from app.sync.heal import heal_authors
+
+    db_session.add(Book(id=7, title="t", url="/u/", art_type=1, cached_at=datetime.now(timezone.utc)))
+    db_session.commit()
+    art = Art(id=7, title="t", url="/u/", art_type=1,
+              persons=[PersonRef(id=70, full_name="A", url=None, role="author"),
+                       PersonRef(id=71, full_name="R", url="/r/", role="reader")],
+              rating=ArtRating(None, 0), prices=ArtPrices(0.0, 0.0, "RUB"),
+              is_available_with_subscription=True, is_abonement_art=True)
+    detail = ArtDetail(art=art, genres=[], series=[], release_date=None)
+    with patch("app.sync.heal.fetch_arts_detail", return_value=detail):
+        stats = heal_authors(db_session, MagicMock())
+    assert stats["healed"] == 1
+    assert [a.person_id for a in db_session.query(BookAuthor).filter_by(book_id=7)] == [70]

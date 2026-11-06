@@ -8,24 +8,134 @@ Fetches finished book IDs, upserts into user_listened_book.
 Uses same SyncRun tracking as bulk.
 """
 
+import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
+from sqlalchemy import select, update
+from sqlalchemy.exc import OperationalError
 
-from app.db.models import Book, SyncRun, UserListenedBook
+from app.db.models import Book, SyncRun, User, UserListenedBook
 from app.scrapers.auth import (
+    PROFILE_SYNC_CLAIM_KEY,
+    PROFILE_SYNCED_AT_KEY,
     LitresAuthRejectedError,
     _load_stored_tokens,
     access_token_valid,
     expire_litres_session,
     get_valid_token,
-    record_profile_synced,
+    has_litres_tokens,
+    parse_session_data,
 )
 from app.scrapers.profile import LitresProfileAuthError, fetch_finished_book_ids
 from app.sync.common import get_sync_config
 
 log = logging.getLogger(__name__)
+
+
+class ProfileSyncAccountChanged(Exception):
+    """The account was logged out or switched while the sync was fetching."""
+
+
+def _parse_utc(raw) -> datetime | None:
+    if not raw:
+        return None
+    try:
+        when = datetime.fromisoformat(raw)
+    except (ValueError, TypeError):
+        return None
+    return when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+
+
+def profile_sync_is_stale(data: dict, stale_hours: int, now: datetime | None = None) -> bool:
+    """Per-user staleness from session_data['profile_synced_at'] (missing → stale)."""
+    synced_at = _parse_utc(data.get(PROFILE_SYNCED_AT_KEY))
+    if synced_at is None:
+        return True
+    now = now or datetime.now(timezone.utc)
+    return (now - synced_at).total_seconds() / 3600 >= stale_hours
+
+
+def profile_sync_claim_active(data: dict, retry_minutes: int, now: datetime | None = None) -> bool:
+    """True while a previous claim (started/failed sync) still blocks a new one."""
+    claimed_at = _parse_utc(data.get(PROFILE_SYNC_CLAIM_KEY))
+    if claimed_at is None:
+        return False
+    now = now or datetime.now(timezone.utc)
+    return now - claimed_at < timedelta(minutes=retry_minutes)
+
+
+def claim_profile_sync(
+    session_factory,
+    user_id: int,
+    *,
+    retry_minutes: int,
+    stale_hours: int | None = None,
+    require_tokens: bool = True,
+    now: datetime | None = None,
+) -> bool:
+    """Atomically claim the right to start a profile sync for `user_id`.
+
+    The claim is a timestamp in User.session_data written with a
+    compare-and-swap UPDATE, so it is shared by every gunicorn worker and
+    cannot be bypassed by replaying an old cookie (audit W6). A claim blocks
+    further claims for `retry_minutes`, which also backs off retries after a
+    failed or transiently unreachable LitRes (audit W12).
+
+    `require_tokens=False` is for the login endpoint, which has just
+    authenticated the account itself.
+
+    Returns True if this caller won the claim and should start the sync.
+    Returns False when not logged in, not stale (if `stale_hours` given),
+    claimed recently, lost the race, or the DB is busy.
+    """
+    now = now or datetime.now(timezone.utc)
+    try:
+        with session_factory() as s:
+            row = s.execute(select(User.session_data).where(User.id == user_id)).first()
+            if row is None:
+                return False
+            raw = row[0]
+            data = parse_session_data(raw)
+            if require_tokens and not has_litres_tokens(data):
+                return False
+            if stale_hours is not None and not profile_sync_is_stale(data, stale_hours, now):
+                return False
+            if profile_sync_claim_active(data, retry_minutes, now):
+                return False
+            data[PROFILE_SYNC_CLAIM_KEY] = now.isoformat()
+            result = s.execute(
+                update(User)
+                .where(
+                    User.id == user_id,
+                    User.session_data.is_(None) if raw is None else User.session_data == raw,
+                )
+                .values(session_data=json.dumps(data))
+            )
+            s.commit()
+            return result.rowcount == 1
+    except OperationalError as exc:
+        log.warning("Profile sync claim for user %d skipped (DB busy): %s", user_id, exc)
+        return False
+
+
+def _check_account_unchanged(session, user_id: int, email: str) -> dict:
+    """Re-read the user inside the write transaction; raise if the account changed.
+
+    Call only after the transaction holds the SQLite write lock (i.e. after a
+    flush of pending writes): then no logout/login can commit until ours does.
+    """
+    row = session.execute(
+        select(User.session_data, User.litres_login).where(User.id == user_id)
+    ).first()
+    data = parse_session_data(row[0]) if row else {}
+    current = (data.get("email") or "").strip().lower()
+    if not has_litres_tokens(data) or current != (email or "").strip().lower():
+        raise ProfileSyncAccountChanged(
+            f"Account for user {user_id} was logged out or switched during the sync"
+        )
+    return data
 
 
 def run_profile(
@@ -116,21 +226,43 @@ def run_profile(
             run.status = "done"
             run.books_upserted = len(new_ids)
             run.finished_at = datetime.now(timezone.utc)
+            # The flush takes the SQLite write lock; from here until commit no
+            # logout or account switch can commit. Only then verify that the
+            # account the books were fetched for is still the linked one, so a
+            # logout/switch during the fetch cannot resurrect or mix the
+            # listened list (audit W4/W18).
+            session.flush()
+            data = _check_account_unchanged(session, user_id, email)
+            data[PROFILE_SYNCED_AT_KEY] = run.finished_at.isoformat()
+            data.pop(PROFILE_SYNC_CLAIM_KEY, None)
+            session.execute(
+                update(User).where(User.id == user_id).values(session_data=json.dumps(data))
+            )
             session.commit()
-            record_profile_synced(session_factory, user_id, run.finished_at)
 
             log.info(
                 "Profile sync done: %d new, %d already known, %d skipped (not in DB)",
                 len(new_ids), len(already_listened), skipped,
             )
 
+        except ProfileSyncAccountChanged as exc:
+            session.rollback()
+            log.info("Profile sync discarded: %s", exc)
+            run.status = "failed"
+            run.books_upserted = 0
+            run.finished_at = datetime.now(timezone.utc)
+            run.error_message = str(exc)[:500]
+            session.commit()
         except Exception as exc:
+            session.rollback()
             run.status = "failed"
             run.finished_at = datetime.now(timezone.utc)
             run.error_message = str(exc)[:500]
             session.commit()
             if expire_on_auth_failure and isinstance(exc, LitresAuthRejectedError):
-                expire_litres_session(session_factory, user_id)
+                # Only expire the account this sync was for — never one the
+                # user switched to meanwhile.
+                expire_litres_session(session_factory, user_id, email=email)
             raise
 
 

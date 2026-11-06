@@ -48,7 +48,7 @@ def isolation_app():
         app.register_blueprint(bp)
 
         # Helper route to read g.user_id
-        @app.route("/test-whoami")
+        @app.route("/test-whoami", methods=["GET", "POST"])
         def whoami():
             return jsonify({"user_id": g.user_id})
 
@@ -117,12 +117,14 @@ class TestSessionIsolation:
         """Two separate test_client instances (= two browsers) get different user_ids."""
         app, Factory = isolation_app
 
+        # Users are created on the first state-changing request (lazy, W1/W9)
         with app.test_client() as client_a:
-            uid_a = client_a.get("/test-whoami").get_json()["user_id"]
+            uid_a = client_a.post("/test-whoami").get_json()["user_id"]
         with app.test_client() as client_b:
-            uid_b = client_b.get("/test-whoami").get_json()["user_id"]
+            uid_b = client_b.post("/test-whoami").get_json()["user_id"]
 
         assert uid_a != uid_b
+        assert 0 not in (uid_a, uid_b)
 
         # Both have their own UserSettings rows
         with Factory() as s:
