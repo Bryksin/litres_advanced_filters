@@ -341,6 +341,8 @@ export LITRES_EMAIL="your@email.com"
 export LITRES_PASSWORD="your-password"
 ```
 
+The web app also uses these for silent re-login: when the stored LitRes session of the account matching `LITRES_EMAIL` can no longer be renewed, the background profile sync logs in again automatically. Other accounts whose session cannot be renewed are marked expired: their cached listened list keeps working and the UI shows a "Сессия истекла / Войти снова" prompt. No user passwords are stored.
+
 ### Admin Panel (`ADMIN_EMAILS`)
 
 A protected admin dashboard for monitoring sync jobs, managing cron schedules, and retrying failed books. Set the `ADMIN_EMAILS` environment variable to enable it:

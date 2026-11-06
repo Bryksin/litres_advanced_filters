@@ -1,6 +1,5 @@
 """Auth controller — login/logout/status endpoints for LitRes auth."""
 
-import json
 import logging
 import threading
 from datetime import datetime, timezone
@@ -10,7 +9,13 @@ from flask import Blueprint, g, jsonify, request, session
 from app.config import Config
 from app.db import SessionLocal
 from app.db.models import User, UserListenedBook
-from app.scrapers.auth import get_valid_token, LitresAuthError
+from app.scrapers.auth import (
+    LitresAuthError,
+    get_valid_token,
+    has_litres_tokens,
+    is_litres_session_expired,
+    parse_session_data,
+)
 from app.sync.profile import run_profile
 
 log = logging.getLogger(__name__)
@@ -26,20 +31,35 @@ def _get_listened_count(session_factory, user_id: int) -> int:
         ).count()
 
 
-def _is_authenticated(session_factory, user_id: int) -> tuple[bool, str | None]:
-    """Check if user has valid stored tokens. Returns (is_auth, email)."""
+def _auth_data(session_factory, user_id: int) -> dict:
     with session_factory() as s:
         user = s.get(User, user_id)
-        if not user or not user.session_data:
-            return False, None
-        try:
-            data = json.loads(user.session_data)
-        except (json.JSONDecodeError, TypeError):
-            return False, None
+        return parse_session_data(user.session_data) if user else {}
 
-        if data.get("access_token") and data.get("refresh_token"):
-            return True, data.get("email")
-        return False, None
+
+def _is_authenticated(session_factory, user_id: int) -> tuple[bool, str | None]:
+    """Check if a LitRes account is linked to this user. Returns (is_auth, email).
+
+    True both for a live session and for an *expired* one (tokens dropped by the
+    middleware because they could not be renewed). An expired account keeps its
+    cached listened books, so the listened-based filters stay usable; the
+    template distinguishes the two via `auth_expired` (middleware context
+    processor) and /auth/status reports `expired`. Network-free.
+    """
+    data = _auth_data(session_factory, user_id)
+    if has_litres_tokens(data) or is_litres_session_expired(data):
+        return True, data.get("email")
+    return False, None
+
+
+def _previous_account_email(session_factory, user_id: int) -> str | None:
+    """Email of the LitRes account currently linked (live or expired), if any."""
+    with session_factory() as s:
+        user = s.get(User, user_id)
+        if not user:
+            return None
+        data = parse_session_data(user.session_data)
+        return data.get("email") or user.litres_login
 
 
 @bp.route("/login", methods=["POST"])
@@ -52,6 +72,8 @@ def login():
     if not email or not password:
         return jsonify({"ok": False, "error": "Email and password are required"}), 400
 
+    previous_email = _previous_account_email(SessionLocal, g.user_id)
+
     # Step 1: Authenticate (fail hard if this doesn't work)
     try:
         get_valid_token(
@@ -59,6 +81,9 @@ def login():
             user_id=g.user_id,
             email=email,
             password=password,
+            # Always verify the submitted credentials; never reuse a stored
+            # token (it may belong to a different LitRes account).
+            force_login=True,
         )
     except LitresAuthError as exc:
         log.warning("Login failed: %s", exc)
@@ -67,12 +92,19 @@ def login():
         log.exception("Login error")
         return jsonify({"ok": False, "error": "Internal error"}), 500
 
-    # Persist litres_login on the User row
+    # Persist litres_login on the User row. Listened books belong to the LitRes
+    # account: same account (e.g. re-login after expiry) keeps the cached list
+    # and the sync below refreshes it; a different account replaces it.
+    switched_account = bool(previous_email) and previous_email.strip().lower() != email.lower()
     with SessionLocal() as s:
         user = s.get(User, g.user_id)
         if user:
             user.litres_login = email
-            s.commit()
+        if switched_account:
+            s.query(UserListenedBook).filter(
+                UserListenedBook.user_id == g.user_id,
+            ).delete(synchronize_session="fetch")
+        s.commit()
 
     # Grant admin access if email is in the allowlist
     if Config.ADMIN_EMAILS and email.strip().lower() in Config.ADMIN_EMAILS:
@@ -133,7 +165,11 @@ def logout():
 def status():
     """Check current auth status without making HTTP calls."""
     is_auth, email = _is_authenticated(SessionLocal, g.user_id)
-    result = {"authenticated": is_auth, "email": email}
+    result = {
+        "authenticated": is_auth,
+        "email": email,
+        "expired": is_litres_session_expired(_auth_data(SessionLocal, g.user_id)),
+    }
     if is_auth:
         result["listened_count"] = _get_listened_count(SessionLocal, g.user_id)
     return jsonify(result)

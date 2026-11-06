@@ -1,0 +1,18 @@
+{# Shared template helpers. Import with: {% import "_macros.html" as m %} #}
+
+{# Russian plural form: plural(n, 'книга', 'книги', 'книг') #}
+{% macro plural(n, one, few, many) -%}
+  {%- set n10 = n % 10 -%}
+  {%- set n100 = n % 100 -%}
+  {%- if n10 == 1 and n100 != 11 -%}{{ one }}
+  {%- elif n10 >= 2 and n10 <= 4 and (n100 < 12 or n100 > 14) -%}{{ few }}
+  {%- else -%}{{ many }}{%- endif -%}
+{%- endmacro %}
+
+{# Result count label. total_count counts catalog cards (a series card = 1),
+   so the noun follows the active card mode. #}
+{% macro count_label(n, settings) -%}
+  {%- if settings and settings.series_only -%}{{ n }} {{ plural(n, 'серия', 'серии', 'серий') }}
+  {%- elif settings and settings.standalones_only -%}{{ n }} {{ plural(n, 'книга', 'книги', 'книг') }}
+  {%- else -%}{{ n }} {{ plural(n, 'результат', 'результата', 'результатов') }}{%- endif -%}
+{%- endmacro %}

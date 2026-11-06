@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m %}
 
 {% block title %}Каталог — Расширенные фильтры Литрес{% endblock %}
 {% block page_title %}Каталог{% endblock %}
-{% block results_meta %}<span class="results-meta">{{ total_count if total_count is defined else items|length }} книг</span>{% endblock %}
+{% block results_meta %}<span class="results-meta">{{ m.count_label(total_count if total_count is defined else items|length, settings) }}</span>{% endblock %}
 
 {% block content %}
 <section class="results" aria-label="Результаты поиска">
@@ -10,7 +11,7 @@
   <div class="book-grid">
     {% for item in items %}
     <article class="book-card{{ ' book-card--series' if item.type == 'series' }}"
-             {% if item.type == 'series' %}aria-label="Серия: {{ item.title }}, {{ item.book_count }} книг"{% endif %}>
+             {% if item.type == 'series' %}aria-label="Серия: {{ item.title }}, {{ item.book_count }} {{ m.plural(item.book_count, 'книга', 'книги', 'книг') }}"{% endif %}>
       <div class="book-card__cover-wrap">
         <a href="{{ item.url }}" class="book-card__cover-link" target="_blank" rel="noopener">
           <img
@@ -26,7 +27,7 @@
           <span class="book-card__series-icon" aria-hidden="true">
             <svg viewBox="0 0 24 14" width="18" height="13" fill="currentColor"><rect x="0" y="2" width="5" height="10" rx="1"/><rect x="9" y="0" width="5" height="12" rx="1"/><rect x="18" y="1" width="5" height="11" rx="1"/></svg>
           </span>
-          Серия · {{ item.book_count }} книг
+          Серия · {{ item.book_count }} {{ m.plural(item.book_count, 'книга', 'книги', 'книг') }}
         </div>
         {% endif %}
       </div>
