@@ -56,13 +56,21 @@ command -v npm >/dev/null 2>&1
 npm --version >/dev/null 2>&1
 
 # =============================================================================
-# Update Claude Code to latest (official installer)
+# Update Claude Code to latest
+#
+# The dev image installs Claude Code at build time (docker/dev/Dockerfile), so
+# the built-in updater is enough here. The official installer is only a
+# fallback for a missing binary. An update failure (e.g. offline) must not
+# abort the rest of this script under `set -e`.
 # =============================================================================
 
 echo "Updating Claude Code"
-curl -fsSL https://claude.ai/install.sh | bash
-command -v claude >/dev/null 2>&1
-claude --version >/dev/null 2>&1
+if command -v claude >/dev/null 2>&1; then
+  claude update || echo "Warning: 'claude update' failed, keeping $(claude --version 2>/dev/null || echo 'current version')"
+else
+  echo "Claude Code not found, installing"
+  curl -fsSL https://claude.ai/install.sh | bash || echo "Warning: Claude Code install failed"
+fi
 
 # =============================================================================
 # Install Python dependencies
